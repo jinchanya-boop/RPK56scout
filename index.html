@@ -646,15 +646,183 @@
     // ========================================
     // Global Variables & Configuration
     // ========================================
-    const ORIGINAL_API_URL = 'https://script.google.com/macros/s/AKfycbxwtV9xBYEmQUL9MbvAHIpKZfkvG39i3b8LhZJeHtYEvw2d-jCmmG2XF4GoAhFNnkv9qw/exec';
-    
-    // ใช้ CORS proxy สำหรับ GitHub Pages
-    const API_URL = `https://api.allorigins.win/raw?url=${encodeURIComponent(ORIGINAL_API_URL)}`;
+    // **ใส่ URL ใหม่ที่ได้จาก Google Apps Script ตรงนี้**
+    const ORIGINAL_API_URL = 'https://script.google.com/macros/s/AKfycbzZrmfCCvyLldl3hsGTtRhTwTAWZJZnWINUc229x6Ntbp5UxQJ86U93yDbn1po59dOTzw/exec';
     
     let studentsData = [];
     let activitiesData = [];
     let teachersData = [];
 
+// ========================================
+    // Debug และ Test Connection ก่อน
+    // ========================================
+    
+    async function testConnection() {
+        console.log('Testing connection to:', ORIGINAL_API_URL);
+        
+        try {
+            // Test 1: ลองเรียกผ่าน fetch ธรรมดา
+            console.log('Test 1: Direct fetch...');
+            const response = await fetch(ORIGINAL_API_URL + '?action=getData');
+            console.log('Response status:', response.status);
+            console.log('Response headers:', [...response.headers.entries()]);
+            
+            if (response.ok) {
+                const text = await response.text();
+                console.log('Response text:', text.substring(0, 200) + '...');
+                return true;
+            }
+        } catch (error) {
+            console.log('Direct fetch failed:', error);
+        }
+
+        // Test 2: ลองเรียกผ่าน JSONP
+        console.log('Test 2: JSONP...');
+        return new Promise((resolve) => {
+            const callbackName = 'testCallback';
+            window[callbackName] = function(data) {
+                console.log('JSONP success, data keys:', Object.keys(data));
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+                resolve(true);
+            };
+
+            const script = document.createElement('script');
+            script.src = ORIGINAL_API_URL + '?action=getData&callback=' + callbackName;
+            script.onerror = function() {
+                console.log('JSONP failed');
+                delete window[callbackName];
+                resolve(false);
+            };
+            
+            document.head.appendChild(script);
+            
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                if (window[callbackName]) {
+                    console.log('JSONP timeout');
+                    delete window[callbackName];
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                    resolve(false);
+                }
+            }, 10000);
+        });
+    }
+
+    // ========================================
+    // Mock Data สำหรับการทดสอบ
+    // ========================================
+    
+    function loadMockData() {
+        console.log('Loading mock data for testing...');
+        
+        studentsData = [
+            { id: 'STU_001', name: 'เด็กชายสมชาย ใจดี', grade: 'ป.1', number: '1' },
+            { id: 'STU_002', name: 'เด็กหญิงสมหญิง ใจงาม', grade: 'ป.1', number: '2' },
+            { id: 'STU_003', name: 'เด็กชายสมศักดิ์ มีสุข', grade: 'ป.2', number: '1' }
+        ];
+        
+        activitiesData = [
+            {
+                id: 'ACT_001',
+                date: '2025-01-20',
+                grade: 'ป.1',
+                name: 'การผูกเงื่อน',
+                description: 'สอนการผูกเงื่อนพื้นฐาน',
+                location: 'สนามโรงเรียน',
+                responsible: 'นางสาวสมศรี ใจดี',
+                reporter: 'นางสาวสมศรี ใจดี',
+                attendance: [
+                    { studentId: 'STU_001', studentName: 'เด็กชายสมชาย ใจดี', status: 'present' },
+                    { studentId: 'STU_002', studentName: 'เด็กหญิงสมหญิง ใจงาม', status: 'present' }
+                ],
+                images: []
+            }
+        ];
+        
+        teachersData = [
+            { id: 'TCH_001', name: 'นางสาวสมศรี ใจดี', email: 'teacher@school.com', phone: '081-234-5678' }
+        ];
+        
+        updateUI();
+    }
+
+    // ========================================
+    // แสดง Debug Panel
+    // ========================================
+    
+    function showDebugPanel() {
+        const panel = document.createElement('div');
+        panel.id = 'debugPanel';
+        panel.style.cssText = `
+            position: fixed; top: 10px; left: 10px; width: 400px;
+            background: rgba(0,0,0,0.9); color: #00ff00; padding: 15px;
+            border-radius: 8px; font-family: monospace; font-size: 12px;
+            z-index: 10000; max-height: 300px; overflow-y: auto;
+        `;
+        
+        panel.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <strong>🔧 Debug Panel</strong>
+                <button onclick="document.getElementById('debugPanel').remove()" style="background: #ff4444; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer;">✕</button>
+            </div>
+            <div id="debugLog" style="line-height: 1.4;"></div>
+            <div style="margin-top: 10px; display: flex; gap: 5px;">
+                <button onclick="testConnection()" class="debug-btn">Test Connection</button>
+                <button onclick="loadMockData()" class="debug-btn">Load Mock Data</button>
+                <button onclick="clearCache()" class="debug-btn">Clear Cache</button>
+                <button onclick="showSystemInfo()" class="debug-btn">System Info</button>
+            </div>
+        `;
+        
+        // Add button styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .debug-btn {
+                background: #333; color: #00ff00; border: 1px solid #555;
+                padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;
+            }
+            .debug-btn:hover { background: #555; }
+        `;
+        document.head.appendChild(style);
+        
+        document.body.appendChild(panel);
+    }
+
+    function addDebugLog(message) {
+        const log = document.getElementById('debugLog');
+        if (log) {
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML += `<div>[${time}] ${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+    }
+
+    function clearCache() {
+        localStorage.removeItem('scoutActivityData');
+        addDebugLog('Cache cleared');
+    }
+
+    function showSystemInfo() {
+        const info = `
+            URL: ${ORIGINAL_API_URL}<br>
+            Browser: ${navigator.userAgent}<br>
+            Students: ${studentsData.length}<br>
+            Activities: ${activitiesData.length}<br>
+            Teachers: ${teachersData.length}
+        `;
+        addDebugLog(info);
+    }
+
+    // Override console.log to show in debug panel
+    const originalLog = console.log;
+    console.log = function(...args) {
+        originalLog.apply(console, args);
+        if (document.getElementById('debugLog')) {
+            addDebugLog(args.join(' '));
+        }
+    };
+    
     // ========================================
     // Global Utility Functions
     // ========================================
@@ -728,47 +896,69 @@
     async function loadData(forceRefresh = false) {
         if (studentsData.length > 0 && !forceRefresh) return Promise.resolve();
 
-        showLoadingIndicator();
+        // ตรวจสอบ URL ก่อน
+        if (!ORIGINAL_API_URL || ORIGINAL_API_URL === 'YOUR_NEW_GOOGLE_APPS_SCRIPT_URL_HERE') {
+            console.log('❌ กรุณาใส่ URL ของ Google Apps Script ในโค้ด');
+            showManualSetupInstructions();
+            loadMockData();
+            return;
+        }
 
-        // Try multiple methods in order
+        showLoadingIndicator();
+        console.log('🔄 เริ่มโหลดข้อมูล...');
+
+        // ลองหลายวิธีตามลำดับ
         const methods = [
-            () => loadWithJSONP(),
-            () => loadWithProxy(),
-            () => loadWithDirectFetch()
+            { name: 'JSONP', func: loadWithJSONP },
+            { name: 'Direct Fetch', func: loadWithDirectFetch },
+            { name: 'Proxy', func: loadWithProxy }
         ];
 
         for (let i = 0; i < methods.length; i++) {
             try {
-                console.log(`Trying loading method ${i + 1}...`);
-                await methods[i]();
+                console.log(`🔄 ลองวิธีที่ ${i + 1}: ${methods[i].name}...`);
+                await methods[i].func();
                 
                 if (studentsData.length > 0 || activitiesData.length > 0 || teachersData.length > 0) {
-                    console.log('Data loaded successfully with method', i + 1);
+                    console.log(`✅ โหลดข้อมูลสำเร็จด้วยวิธี: ${methods[i].name}`);
                     hideLoadingIndicator();
                     saveCachedData();
                     updateUI();
                     return;
                 }
             } catch (error) {
-                console.warn(`Method ${i + 1} failed:`, error);
-                continue;
+                console.log(`❌ วิธี ${methods[i].name} ล้มเหลว:`, error.message);
             }
         }
 
-        // If all methods fail, use cached data
-        console.log('All loading methods failed, using cached data');
+        // หากทุกวิธีล้มเหลว
+        console.log('❌ ทุกวิธีล้มเหลว กำลังใช้ข้อมูล cache หรือ mock data');
         hideLoadingIndicator();
-        loadCachedData();
-        showErrorMessage('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กำลังใช้ข้อมูลที่เก็บไว้ล่าสุด');
+        
+        if (!loadCachedData()) {
+            console.log('📝 ไม่มีข้อมูล cache โหลด mock data สำหรับทดสอบ');
+            loadMockData();
+            showErrorMessage(`
+                ไม่สามารถเชื่อมต่อกับ Google Apps Script ได้<br><br>
+                <strong>สาเหตุที่เป็นไปได้:</strong><br>
+                • URL ของ Web App ไม่ถูกต้อง<br>
+                • ยังไม่ได้ Deploy Google Apps Script<br>
+                • การตั้งค่า Permissions ไม่ถูกต้อง<br><br>
+                กำลังใช้ข้อมูลตัวอย่างสำหรับทดสอบ
+            `);
+        }
     }
-    // Method 1: JSONP (most reliable for GitHub Pages)
+    // ========================================
+    // วิธีการโหลดข้อมูลต่างๆ
+    // ========================================
+
     function loadWithJSONP() {
         return new Promise((resolve, reject) => {
             const callbackName = 'dataCallback_' + Date.now();
             const timeoutId = setTimeout(() => {
                 delete window[callbackName];
-                reject(new Error('JSONP timeout'));
-            }, 10000);
+                reject(new Error('JSONP timeout after 15 seconds'));
+            }, 15000);
 
             window[callbackName] = function(data) {
                 clearTimeout(timeoutId);
@@ -792,49 +982,27 @@
             };
 
             const script = document.createElement('script');
-            script.src = `${ORIGINAL_API_URL}?action=getData&callback=${callbackName}`;
+            script.src = `${ORIGINAL_API_URL}?action=getData&callback=${callbackName}&_=${Date.now()}`;
             script.onerror = () => {
                 clearTimeout(timeoutId);
                 delete window[callbackName];
                 reject(new Error('JSONP script load failed'));
             };
             
+            console.log('📡 Loading:', script.src);
             document.head.appendChild(script);
         });
     }
 
-    // Method 2: CORS Proxy
-    async function loadWithProxy() {
-        const response = await fetch(`${API_URL}?action=getData`, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Proxy request failed: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (data.success === false) {
-            throw new Error(data.message || 'Server returned error');
-        }
-        
-        studentsData = data.students || [];
-        activitiesData = data.activities || [];
-        teachersData = data.teachers || [];
-    }
-
-    // Method 3: Direct Fetch (fallback)
     async function loadWithDirectFetch() {
-        const response = await fetch(`${ORIGINAL_API_URL}?action=getData`, {
+        const response = await fetch(`${ORIGINAL_API_URL}?action=getData&_=${Date.now()}`, {
             method: 'GET',
             mode: 'cors',
             headers: { 'Accept': 'application/json' }
         });
 
         if (!response.ok) {
-            throw new Error(`Direct fetch failed: ${response.status}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
@@ -846,6 +1014,61 @@
         studentsData = data.students || [];
         activitiesData = data.activities || [];
         teachersData = data.teachers || [];
+    }
+
+    async function loadWithProxy() {
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(ORIGINAL_API_URL + '?action=getData')}`;
+        const response = await fetch(proxyUrl);
+
+        if (!response.ok) {
+            throw new Error(`Proxy failed: ${response.status}`);
+        }
+
+        const proxyData = await response.json();
+        const data = JSON.parse(proxyData.contents);
+        
+        if (data.success === false) {
+            throw new Error(data.message || 'Server returned error');
+        }
+        
+        studentsData = data.students || [];
+        activitiesData = data.activities || [];
+        teachersData = data.teachers || [];
+    }
+
+    // ========================================
+    // แสดงคำแนะนำการตั้งค่า
+    // ========================================
+    
+    function showManualSetupInstructions() {
+        const instructions = document.createElement('div');
+        instructions.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: flex; align-items: center;
+            justify-content: center; z-index: 10002; font-family: 'Sarabun', sans-serif;
+        `;
+        
+        instructions.innerHTML = `
+            <div style="background: white; padding: 30px; border-radius: 15px; max-width: 600px; text-align: left;">
+                <h3 style="color: #1e3c72; margin-bottom: 20px;">🔧 การตั้งค่า Google Apps Script</h3>
+                <ol style="line-height: 1.8;">
+                    <li>ไปที่ <strong>script.google.com</strong></li>
+                    <li>เปิดโปรเจค <strong>RPK56scout</strong></li>
+                    <li>คลิก <strong>"Deploy"</strong> → <strong>"New deployment"</strong></li>
+                    <li>เลือก Type: <strong>"Web app"</strong></li>
+                    <li>Execute as: <strong>"Me"</strong></li>
+                    <li>Who has access: <strong>"Anyone"</strong></li>
+                    <li>คลิก <strong>"Deploy"</strong> และอนุญาต permissions</li>
+                    <li>คัดลอก <strong>Web app URL</strong> ที่ได้</li>
+                    <li>แทนที่ในโค้ด JavaScript ตรง <code>ORIGINAL_API_URL</code></li>
+                </ol>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button onclick="this.closest('div').parentElement.remove()" class="btn">ปิด</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(instructions);
     }
     // ========================================
     // View Rendering Functions
@@ -1489,7 +1712,7 @@
             <div style="text-align: center; background: white; color: #1e3c72; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                 <div class="spinner"></div>
                 <div style="margin-top: 20px; font-weight: 600;">กำลังเชื่อมต่อข้อมูล...</div>
-                <div style="margin-top: 10px; font-size: 14px; color: #666;">กรุณารอสักครู่</div>
+                <div style="margin-top: 10px; font-size: 14px; color: #666;">กำลังลองหลายวิธี กรุณารอสักครู่</div>
             </div>
         `;
         document.body.appendChild(indicator);
@@ -1509,34 +1732,15 @@
         `;
         modal.innerHTML = `
             <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-                <h3 style="color: #dc3545; margin-bottom: 15px; font-size: 20px;">⚠️ แจ้งเตือน</h3>
-                <p style="margin-bottom: 25px; line-height: 1.6; color: #666;">${message}</p>
+                <h3 style="color: #dc3545; margin-bottom: 15px; font-size: 20px;">⚠️ ปัญหาการเชื่อมต่อ</h3>
+                <div style="margin-bottom: 25px; line-height: 1.6; color: #666; text-align: left;">${message}</div>
                 <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button onclick="this.closest('div').parentElement.remove()" class="btn btn-danger">รับทราบ</button>
-                    <button onclick="location.reload()" class="btn">ลองใหม่</button>
+                    <button onclick="this.closest('div').parentElement.remove()" class="btn btn-danger">ปิด</button>
+                    <button onclick="showDebugPanel()" class="btn">เปิด Debug</button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
-    }
-
-    function showSuccessMessage(message) {
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed; top: 20px; right: 20px;
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white; padding: 15px 25px; border-radius: 8px;
-            z-index: 10001; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-            font-family: 'Sarabun', sans-serif; font-weight: 600;
-            animation: slideIn 0.3s ease-out;
-        `;
-        modal.innerHTML = `✅ ${message}`;
-        document.body.appendChild(modal);
-        
-        setTimeout(() => {
-            modal.style.animation = 'slideOut 0.3s ease-out';
-            setTimeout(() => modal.remove(), 300);
-        }, 3000);
     }
 
     function loadCachedData() {
@@ -1546,18 +1750,16 @@
                 const data = JSON.parse(cached);
                 const cacheAge = Date.now() - (data.timestamp || 0);
                 
-                // Use cached data if less than 24 hours old
-                if (cacheAge < 86400000) {
-                    studentsData = data.students || [];
-                    activitiesData = data.activities || [];
-                    teachersData = data.teachers || [];
-                    console.log('Loaded cached data (age:', Math.round(cacheAge / 60000), 'minutes)');
-                    updateUI();
-                    return true;
-                }
+                studentsData = data.students || [];
+                activitiesData = data.activities || [];
+                teachersData = data.teachers || [];
+                
+                console.log(`📦 โหลดข้อมูล cache (อายุ: ${Math.round(cacheAge / 60000)} นาที)`);
+                updateUI();
+                return true;
             }
         } catch (e) {
-            console.log('No valid cached data available');
+            console.log('❌ ไม่สามารถโหลด cache ได้');
         }
         return false;
     }
@@ -1570,9 +1772,9 @@
                 teachers: teachersData,
                 timestamp: Date.now()
             }));
-            console.log('Data cached successfully');
+            console.log('💾 บันทึกข้อมูลลง cache แล้ว');
         } catch (e) {
-            console.log('Could not save cached data');
+            console.log('❌ ไม่สามารถบันทึก cache ได้');
         }
     }
 // ========================================
@@ -1788,20 +1990,29 @@ async function submitActivityForm(event) {
     }
 
     // ========================================
-    // Initialize App
+    // Initialize App with Debug
     // ========================================
+    
     document.addEventListener('DOMContentLoaded', () => {
-        // Show cached data immediately for better UX
+        // แสดง debug panel ทันที
+        setTimeout(() => showDebugPanel(), 1000);
+        
+        // ลองโหลดข้อมูล cache ก่อน
         if (loadCachedData()) {
-            showConnectionStatus();
+            console.log('✅ แสดงข้อมูล cache ก่อน');
         }
         
-        // Try to load fresh data in background
+        // จากนั้นลองโหลดข้อมูลใหม่
         loadData().catch(() => {
-            if (studentsData.length === 0) {
-                showErrorMessage('ไม่สามารถเชื่อมต่อได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
-            }
+            console.log('❌ โหลดข้อมูลล้มเหลว');
         });
+    });
+
+    // เพิ่ม keyboard shortcut สำหรับ debug
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+            showDebugPanel();
+        }
     });
 
     // Add retry mechanism for failed requests
