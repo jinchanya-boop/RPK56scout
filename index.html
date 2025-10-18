@@ -646,7 +646,7 @@
     // ========================================
     // Global Variables & Configuration
     // ========================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbz4iskcZfjCgqrC9I7o7TW1JazesqFHiQMKqsIIRbnTsvyVXM52dsL0g1KhNLNaV-eCKQ/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbx4OhWMmdVGK4brQVEQ60hRBW2hAsDsZBKDGIPEagDp_Ppf-Mm_gzRc_v6yNrryS5S8zQ/exec';
     let studentsData = [];
     let activitiesData = [];
     let teachersData = [];
@@ -725,13 +725,30 @@
         if (studentsData.length > 0 && !forceRefresh) return;
 
         try {
-            const response = await fetch(`${API_URL}?action=getData`);
+            // [START] === ⭐️ โค้ดที่แก้ไข ===
+            // เปลี่ยนจาก 'GET' (ที่ส่งผ่าน URL) เป็น 'POST' (ที่ส่งผ่าน body)
+            // เพื่อให้สอดคล้องกับ Google Apps Script (doPost) ที่คาดว่าคุณใช้งานอยู่
+            // นี่คือสาเหตุที่ 'addActivity' (POST) ทำงานได้ แต่ 'loadData' (GET) เดิมทำงานไม่ได้
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'getData' })
+            });
+            // [END] === ⭐️ โค้ดที่แก้ไข ===
+
             if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
             const data = await response.json();
             
-            studentsData = data.students || [];
-            activitiesData = data.activities || [];
-            teachersData = data.teachers || [];
+            // [START] === ⭐️ โค้ดที่ปรับปรุง (เผื่อไว้) ===
+            // เพิ่มการตรวจสอบว่าข้อมูลกลับมาแบบมี {success: true, data: {...}} (ตามไฟล์ code.gs ที่คุณส่งมา)
+            // หรือกลับมาแบบ {...} ตรงๆ (ตามโค้ด loadData เดิม)
+            const responseData = data.data || data;
+            // [END] === ⭐️ โค้ดที่ปรับปรุง (เผื่อไว้) ===
+            
+            // ใช้ responseData ที่ตรวจสอบแล้ว
+            studentsData = responseData.students || [];
+            activitiesData = responseData.activities || [];
+            teachersData = responseData.teachers || [];
             
             console.log('Data loaded successfully.');
             
@@ -747,6 +764,7 @@
     
     // ========================================
     // View Rendering Functions
+    // (ส่วนนี้ไม่จำเป็นต้องแก้ไข)
     // ========================================
     function loadDashboard() {
         document.getElementById('totalActivities').textContent = activitiesData.length;
@@ -1017,7 +1035,7 @@
                 border-bottom: 1px dotted #ccc;
                 padding-bottom: 4px;
             }
-            .field-label { 
+          _ .field-label { 
                 display: inline-block; 
                 width: 150px; 
                 font-weight: 700;
@@ -1104,7 +1122,7 @@
                 </div>
                 <div class="sig-box">
                     <div class="line">ลงชื่อ</div>
-                    <div class="sig-name">( ${activity.approver || 'นางภิรญา สอนศิริ'} )</div>
+          _           <div class="sig-name">( ${activity.approver || 'นางภิรญา สอนศิริ'} )</div>
                     <div class="sig-title">รองผู้อำนวยการสถานศึกษา</div>
                 </div>
             </div>
