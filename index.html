@@ -661,7 +661,9 @@ function loadDataWithJSONP() {
         
         // สร้าง global callback function
         window[callbackName] = function(data) {
-            document.head.removeChild(script);
+            if (document.head.contains(script)) {
+                document.head.removeChild(script);
+            }
             delete window[callbackName];
             resolve(data);
         };
