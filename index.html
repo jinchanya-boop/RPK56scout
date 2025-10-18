@@ -1417,6 +1417,7 @@ function showErrorState(errorMessage) {
     document.getElementById('failedStudents').textContent = '?';
 }
 
+
 function showRetryButton() {
     if (document.getElementById('retryButton')) return; // ถ้ามีแล้วไม่ต้องสร้างใหม่
     
@@ -1491,6 +1492,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // เริ่มโหลดข้อมูล
     loadData();
 });
+    
 function showOfflineState() {
     // แสดงข้อความในแต่ละ tab ว่าไม่สามารถโหลดข้อมูลได้
     document.getElementById('activityList').innerHTML = '<p class="loading-placeholder">❌ ไม่สามารถโหลดข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่อ</p>';
