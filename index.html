@@ -646,7 +646,7 @@
     // ========================================
     // Global Variables & Configuration
     // ========================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbx4OhWMmdVGK4brQVEQ60hRBW2hAsDsZBKDGIPEagDp_Ppf-Mm_gzRc_v6yNrryS5S8zQ/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycby2AWEno4B5rb0pgA973EOMhuPgxgdzuqzbjSWFbHdH7D1Fld1Z0TLdzJyUcP3qY86aLg/exec';
     let studentsData = [];
     let activitiesData = [];
     let teachersData = [];
@@ -725,21 +725,13 @@
         if (studentsData.length > 0 && !forceRefresh) return;
 
         try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                // [ ⭐️ ลบ headers ออกจากตรงนี้ ]
-                body: JSON.stringify({ action: 'getData' })
-            });
-
+            const response = await fetch(`${API_URL}?action=getData`);
             if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
             const data = await response.json();
             
-            // ส่วนนี้ยังคงเดิม เพื่อรองรับข้อมูลที่ส่งกลับมา
-            const responseData = data.data || data;
-            
-            studentsData = responseData.students || [];
-            activitiesData = responseData.activities || [];
-            teachersData = responseData.teachers || [];
+            studentsData = data.students || [];
+            activitiesData = data.activities || [];
+            teachersData = data.teachers || [];
             
             console.log('Data loaded successfully.');
             
@@ -749,14 +741,12 @@
 
         } catch (error) {
             console.error('Error loading data:', error);
-            // นี่คือ Alert ที่คุณเห็น
             alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
         }
     }
     
     // ========================================
     // View Rendering Functions
-    // (ส่วนนี้ไม่จำเป็นต้องแก้ไข)
     // ========================================
     function loadDashboard() {
         document.getElementById('totalActivities').textContent = activitiesData.length;
@@ -1027,7 +1017,7 @@
                 border-bottom: 1px dotted #ccc;
                 padding-bottom: 4px;
             }
-          _ .field-label { 
+            .field-label { 
                 display: inline-block; 
                 width: 150px; 
                 font-weight: 700;
@@ -1114,7 +1104,7 @@
                 </div>
                 <div class="sig-box">
                     <div class="line">ลงชื่อ</div>
-          _           <div class="sig-name">( ${activity.approver || 'นางภิรญา สอนศิริ'} )</div>
+                    <div class="sig-name">( ${activity.approver || 'นางภิรญา สอนศิริ'} )</div>
                     <div class="sig-title">รองผู้อำนวยการสถานศึกษา</div>
                 </div>
             </div>
