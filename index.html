@@ -484,6 +484,43 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Setup Instructions */
+        .setup-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px;
+            text-align: center;
+        }
+
+        .setup-panel h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .setup-steps {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .setup-steps ol {
+            line-height: 1.8;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+
         /* ======================================== */
         /* Responsive Styles
         /* ======================================== */
@@ -503,41 +540,64 @@
         }
 
         /* Image Upload Styles */
-.image-upload-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 15px;
-    margin-top: 10px;
-}
+        .image-upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
 
-.image-upload-box {
-    border: 2px dashed #ccc;
-    border-radius: 8px;
-    padding: 10px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    min-height: 120px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: #fdfdfd;
-}
+        .image-upload-box {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fdfdfd;
+        }
 
-.image-upload-box:hover {
-    border-color: #1e3c72;
-    background: #f8f9fa;
-}
+        .image-upload-box:hover {
+            border-color: #1e3c72;
+            background: #f8f9fa;
+        }
 
-.image-upload-box span {
-    color: #666;
-    font-size: 14px;
-}
+        .image-upload-box span {
+            color: #666;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Setup Panel - แสดงเมื่อยังไม่ได้ตั้งค่า -->
+    <div id="setupPanel" class="setup-panel">
+        <h2>🚀 ขั้นตอนการตั้งค่าระบบ</h2>
+        <div class="setup-steps">
+            <h3>📋 ขั้นตอนการ Deploy Google Apps Script</h3>
+            <ol>
+                <li>ไปที่ <strong>script.google.com</strong></li>
+                <li>สร้างโปรเจกต์ใหม่ชื่อ <strong>"RPK56scout"</strong></li>
+                <li>วางโค้ด Google Apps Script ที่ได้รับ</li>
+                <li>คลิก <strong>"Deploy"</strong> → <strong>"New deployment"</strong></li>
+                <li>เลือก Type: <strong>"Web app"</strong></li>
+                <li>Execute as: <strong>"Me"</strong></li>
+                <li>Who has access: <strong>"Anyone"</strong></li>
+                <li>คลิก <strong>"Deploy"</strong> และอนุญาต permissions</li>
+                <li>คัดลอก <strong>Web app URL</strong> ที่ได้มาใส่ด้านล่าง</li>
+            </ol>
+        </div>
+        <input type="url" id="apiUrlInput" class="url-input" placeholder="วาง Google Apps Script Web App URL ที่นี่">
+        <br>
+        <button class="btn btn-success" onclick="setupSystem()">🔗 เชื่อมต่อระบบ</button>
+        <button class="btn" onclick="useDemo()">📝 ใช้ข้อมูลตัวอย่าง</button>
+    </div>
+
+    <div class="container" id="mainSystem" style="display: none;">
         <header class="header">
             <div class="logo">
                 <img src="https://img2.pic.in.th/pic/S__145162426-removebg-preview.png" alt="โลโก้โรงเรียน">
@@ -642,84 +702,209 @@
             พัฒนาโดย นางภิรญา สอนศิริ :: รองผู้อำนวยการโรงเรียนราชประชานุเคราะห์ 56 | © 2025
         </footer>
     </div>
+
 <script>
     // ========================================
     // Global Variables & Configuration
     // ========================================
-    // **ใส่ URL ใหม่ที่ได้จาก Google Apps Script ตรงนี้**
-    const ORIGINAL_API_URL = 'https://script.google.com/macros/s/AKfycbzeIWk8s9Ye-kBwVQDo0g0NS6INep_So10j_FfXXEeTO-lkMrzU0Fuf0ZH5qWH7Xq5l/exec';
-    
+    let API_URL = '';
     let studentsData = [];
     let activitiesData = [];
     let teachersData = [];
 
-// ========================================
-    // Debug และ Test Connection ก่อน
+    // ========================================
+    // Setup Functions
     // ========================================
     
-    async function testConnection() {
-        console.log('Testing connection to:', ORIGINAL_API_URL);
-        
-        try {
-            // Test 1: ลองเรียกผ่าน fetch ธรรมดา
-            console.log('Test 1: Direct fetch...');
-            const response = await fetch(ORIGINAL_API_URL + '?action=getData');
-            console.log('Response status:', response.status);
-            console.log('Response headers:', [...response.headers.entries()]);
-            
-            if (response.ok) {
-                const text = await response.text();
-                console.log('Response text:', text.substring(0, 200) + '...');
-                return true;
-            }
-        } catch (error) {
-            console.log('Direct fetch failed:', error);
+    function setupSystem() {
+        const url = document.getElementById('apiUrlInput').value.trim();
+        if (!url) {
+            alert('กรุณาใส่ URL ของ Google Apps Script');
+            return;
         }
+        
+        if (!url.includes('script.google.com') && !url.includes('script.googleusercontent.com')) {
+            alert('URL ต้องเป็น Google Apps Script URL');
+            return;
+        }
+        
+        API_URL = url;
+        localStorage.setItem('scoutSystemApiUrl', url);
+        testConnection();
+    }
 
-        // Test 2: ลองเรียกผ่าน JSONP
-        console.log('Test 2: JSONP...');
-        return new Promise((resolve) => {
-            const callbackName = 'testCallback';
-            window[callbackName] = function(data) {
-                console.log('JSONP success, data keys:', Object.keys(data));
-                delete window[callbackName];
-                if (script.parentNode) script.parentNode.removeChild(script);
-                resolve(true);
-            };
+    function useDemo() {
+        API_URL = 'DEMO_MODE';
+        localStorage.setItem('scoutSystemApiUrl', 'DEMO_MODE');
+        loadDemoData();
+        showMainSystem();
+    }
 
-            const script = document.createElement('script');
-            script.src = ORIGINAL_API_URL + '?action=getData&callback=' + callbackName;
-            script.onerror = function() {
-                console.log('JSONP failed');
-                delete window[callbackName];
-                resolve(false);
-            };
-            
-            document.head.appendChild(script);
-            
-            // Timeout after 10 seconds
-            setTimeout(() => {
-                if (window[callbackName]) {
-                    console.log('JSONP timeout');
-                    delete window[callbackName];
-                    if (script.parentNode) script.parentNode.removeChild(script);
-                    resolve(false);
-                }
-            }, 10000);
-        });
+    function showMainSystem() {
+        document.getElementById('setupPanel').style.display = 'none';
+        document.getElementById('mainSystem').style.display = 'block';
+        updateUI();
     }
 
     // ========================================
-    // Mock Data สำหรับการทดสอบ
+    // Connection & Data Loading
     // ========================================
     
-    function loadMockData() {
-        console.log('Loading mock data for testing...');
+    async function testConnection() {
+        if (API_URL === 'DEMO_MODE') {
+            loadDemoData();
+            showMainSystem();
+            return;
+        }
+
+        showLoadingIndicator('กำลังทดสอบการเชื่อมต่อ...');
         
+        try {
+            const response = await fetch(API_URL + '?action=getData&_test=' + Date.now(), {
+                method: 'GET',
+                mode: 'cors'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success !== false) {
+                    studentsData = data.students || [];
+                    activitiesData = data.activities || [];
+                    teachersData = data.teachers || [];
+                    hideLoadingIndicator();
+                    showMainSystem();
+                    showSuccessMessage('เชื่อมต่อสำเร็จ!');
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error('Connection test failed:', error);
+        }
+        
+        // ลอง JSONP
+        try {
+            await testWithJSONP();
+            showMainSystem();
+            return;
+        } catch (error) {
+            console.error('JSONP failed:', error);
+        }
+        
+        hideLoadingIndicator();
+        alert('ไม่สามารถเชื่อมต่อได้ กรุณาตรวจสอบ URL และการตั้งค่า Google Apps Script');
+    }
+
+    function testWithJSONP() {
+        return new Promise((resolve, reject) => {
+            const callbackName = 'testCallback_' + Date.now();
+            const timeoutId = setTimeout(() => {
+                delete window[callbackName];
+                reject(new Error('JSONP timeout'));
+            }, 10000);
+
+            window[callbackName] = function(data) {
+                clearTimeout(timeoutId);
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+                
+                studentsData = data.students || [];
+                activitiesData = data.activities || [];
+                teachersData = data.teachers || [];
+                hideLoadingIndicator();
+                showSuccessMessage('เชื่อมต่อสำเร็จผ่าน JSONP!');
+                resolve();
+            };
+
+            const script = document.createElement('script');
+            script.src = API_URL + '?action=getData&callback=' + callbackName + '&_=' + Date.now();
+            script.onerror = () => {
+                clearTimeout(timeoutId);
+                delete window[callbackName];
+                reject(new Error('JSONP script failed'));
+            };
+            
+            document.head.appendChild(script);
+        });
+    }
+
+    async function loadData(forceRefresh = false) {
+        if (API_URL === 'DEMO_MODE') {
+            loadDemoData();
+            return;
+        }
+
+        if ((studentsData.length > 0 || activitiesData.length > 0) && !forceRefresh) {
+            return;
+        }
+
+        showLoadingIndicator('กำลังโหลดข้อมูล...');
+
+        try {
+            // ลอง fetch ธรรมดาก่อน
+            const response = await fetch(API_URL + '?action=getData&_=' + Date.now());
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success !== false) {
+                    studentsData = data.students || [];
+                    activitiesData = data.activities || [];
+                    teachersData = data.teachers || [];
+                    hideLoadingIndicator();
+                    updateUI();
+                    return;
+                }
+            }
+        } catch (error) {
+            console.log('Fetch failed, trying JSONP...');
+        }
+
+        // ลอง JSONP
+        try {
+            await loadWithJSONP();
+            hideLoadingIndicator();
+            updateUI();
+        } catch (error) {
+            hideLoadingIndicator();
+            showErrorMessage('ไม่สามารถโหลดข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่อ');
+        }
+    }
+
+    function loadWithJSONP() {
+        return new Promise((resolve, reject) => {
+            const callbackName = 'loadCallback_' + Date.now();
+            const timeoutId = setTimeout(() => {
+                delete window[callbackName];
+                reject(new Error('Load timeout'));
+            }, 15000);
+
+            window[callbackName] = function(data) {
+                clearTimeout(timeoutId);
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+                
+                studentsData = data.students || [];
+                activitiesData = data.activities || [];
+                teachersData = data.teachers || [];
+                resolve();
+            };
+
+            const script = document.createElement('script');
+            script.src = API_URL + '?action=getData&callback=' + callbackName + '&_=' + Date.now();
+            script.onerror = () => {
+                clearTimeout(timeoutId);
+                delete window[callbackName];
+                reject(new Error('Script load failed'));
+            };
+            
+            document.head.appendChild(script);
+        });
+    }
+
+    function loadDemoData() {
         studentsData = [
             { id: 'STU_001', name: 'เด็กชายสมชาย ใจดี', grade: 'ป.1', number: '1' },
             { id: 'STU_002', name: 'เด็กหญิงสมหญิง ใจงาม', grade: 'ป.1', number: '2' },
-            { id: 'STU_003', name: 'เด็กชายสมศักดิ์ มีสุข', grade: 'ป.2', number: '1' }
+            { id: 'STU_003', name: 'เด็กชายสมศักดิ์ มีสุข', grade: 'ป.2', number: '1' },
+            { id: 'STU_004', name: 'เด็กหญิงสมใจ รักเรียน', grade: 'ป.2', number: '2' }
         ];
         
         activitiesData = [
@@ -728,7 +913,7 @@
                 date: '2025-01-20',
                 grade: 'ป.1',
                 name: 'การผูกเงื่อน',
-                description: 'สอนการผูกเงื่อนพื้นฐาน',
+                description: 'สอนการผูกเงื่อนพื้นฐาน เช่น เงื่อนตาย เงื่อนหัวค้อน',
                 location: 'สนามโรงเรียน',
                 responsible: 'นางสาวสมศรี ใจดี',
                 reporter: 'นางสาวสมศรี ใจดี',
@@ -736,96 +921,443 @@
                     { studentId: 'STU_001', studentName: 'เด็กชายสมชาย ใจดี', status: 'present' },
                     { studentId: 'STU_002', studentName: 'เด็กหญิงสมหญิง ใจงาม', status: 'present' }
                 ],
-                images: []
+                images: [],
+                checker: 'นางปณิตา ปัญญานะ',
+                checkerDate: '2025-01-21 09:00:00',
+                checkerComment: 'กิจกรรมดีมาก',
+                approver: 'นางภิรญา สอนศิริ',
+                approverDate: '2025-01-21 14:00:00',
+                approvalStatus: 'ผ่าน',
+                approverComment: 'อนุมัติ'
             }
         ];
         
         teachersData = [
-            { id: 'TCH_001', name: 'นางสาวสมศรี ใจดี', email: 'teacher@school.com', phone: '081-234-5678' }
+            { id: 'TCH_001', name: 'นางสาวสมศรี ใจดี', email: 'teacher1@school.com', phone: '081-234-5678' },
+            { id: 'TCH_002', name: 'นางปณิตา ปัญญานะ', email: 'panita@school.com', phone: '081-234-5679' },
+            { id: 'TCH_003', name: 'นางภิรญา สอนศิริ', email: 'phiraya@school.com', phone: '081-234-5680' }
         ];
-        
-        updateUI();
     }
 
     // ========================================
-    // แสดง Debug Panel
+    // Data Submission Functions
     // ========================================
     
-    function showDebugPanel() {
-        const panel = document.createElement('div');
-        panel.id = 'debugPanel';
-        panel.style.cssText = `
-            position: fixed; top: 10px; left: 10px; width: 400px;
-            background: rgba(0,0,0,0.9); color: #00ff00; padding: 15px;
-            border-radius: 8px; font-family: monospace; font-size: 12px;
-            z-index: 10000; max-height: 300px; overflow-y: auto;
-        `;
-        
-        panel.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <strong>🔧 Debug Panel</strong>
-                <button onclick="document.getElementById('debugPanel').remove()" style="background: #ff4444; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer;">✕</button>
-            </div>
-            <div id="debugLog" style="line-height: 1.4;"></div>
-            <div style="margin-top: 10px; display: flex; gap: 5px;">
-                <button onclick="testConnection()" class="debug-btn">Test Connection</button>
-                <button onclick="loadMockData()" class="debug-btn">Load Mock Data</button>
-                <button onclick="clearCache()" class="debug-btn">Clear Cache</button>
-                <button onclick="showSystemInfo()" class="debug-btn">System Info</button>
-            </div>
-        `;
-        
-        // Add button styles
-        const style = document.createElement('style');
-        style.textContent = `
-            .debug-btn {
-                background: #333; color: #00ff00; border: 1px solid #555;
-                padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;
+    async function submitData(action, data, successMessage) {
+        if (API_URL === 'DEMO_MODE') {
+            // Simulate API call for demo
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Add to local data for demo
+            switch(action) {
+                case 'addStudent':
+                    studentsData.push(data);
+                    break;
+                case 'addTeacher':
+                    teachersData.push(data);
+                    break;
+                case 'addActivity':
+                    activitiesData.push(data);
+                    break;
             }
-            .debug-btn:hover { background: #555; }
-        `;
-        document.head.appendChild(style);
-        
-        document.body.appendChild(panel);
-    }
+            
+            if (successMessage) showSuccessMessage(successMessage);
+            updateUI();
+            return true;
+        }
 
-    function addDebugLog(message) {
-        const log = document.getElementById('debugLog');
-        if (log) {
-            const time = new Date().toLocaleTimeString();
-            log.innerHTML += `<div>[${time}] ${message}</div>`;
-            log.scrollTop = log.scrollHeight;
+        showLoadingIndicator('กำลังบันทึกข้อมูล...');
+
+        try {
+            // ลอง POST ธรรมดาก่อน
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, ...data })
+            });
+
+            const result = await response.text();
+            let parsedResult;
+            
+            try {
+                parsedResult = JSON.parse(result);
+            } catch (e) {
+                throw new Error('Invalid response format');
+            }
+
+            if (parsedResult.success) {
+                hideLoadingIndicator();
+                if (successMessage) showSuccessMessage(successMessage);
+                await loadData(true);
+                return true;
+            } else {
+                throw new Error(parsedResult.message || 'Unknown error');
+            }
+
+        } catch (error) {
+            console.log('POST failed, trying form submission...');
+            
+            // ลอง form submission
+            try {
+                await submitWithForm(action, data);
+                hideLoadingIndicator();
+                if (successMessage) showSuccessMessage(successMessage);
+                await loadData(true);
+                return true;
+            } catch (formError) {
+                hideLoadingIndicator();
+                showErrorMessage('ไม่สามารถบันทึกข้อมูลได้: ' + error.message);
+                return false;
+            }
         }
     }
 
-    function clearCache() {
-        localStorage.removeItem('scoutActivityData');
-        addDebugLog('Cache cleared');
+    function submitWithForm(action, data) {
+        return new Promise((resolve, reject) => {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.name = 'submitFrame_' + Date.now();
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = API_URL;
+            form.target = iframe.name;
+            
+            // Add form fields
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = action;
+            form.appendChild(actionInput);
+            
+            for (const [key, value] of Object.entries(data)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = typeof value === 'object' ? JSON.stringify(value) : value;
+                form.appendChild(input);
+            }
+            
+            const timeoutId = setTimeout(() => {
+                if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                reject(new Error('Form submission timeout'));
+            }, 15000);
+
+            iframe.onload = function() {
+                clearTimeout(timeoutId);
+                try {
+                    document.body.removeChild(iframe);
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            
+            iframe.onerror = function() {
+                clearTimeout(timeoutId);
+                if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                reject(new Error('Form submission failed'));
+            };
+            
+            document.body.appendChild(iframe);
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        });
     }
 
-    function showSystemInfo() {
-        const info = `
-            URL: ${ORIGINAL_API_URL}<br>
-            Browser: ${navigator.userAgent}<br>
-            Students: ${studentsData.length}<br>
-            Activities: ${activitiesData.length}<br>
-            Teachers: ${teachersData.length}
-        `;
-        addDebugLog(info);
-    }
-
-    // Override console.log to show in debug panel
-    const originalLog = console.log;
-    console.log = function(...args) {
-        originalLog.apply(console, args);
-        if (document.getElementById('debugLog')) {
-            addDebugLog(args.join(' '));
-        }
-    };
+    // ========================================
+    // UI Helper Functions
+    // ========================================
     
+    function showLoadingIndicator(message = 'กำลังโหลด...') {
+        const existing = document.getElementById('loadingIndicator');
+        if (existing) existing.remove();
+
+        const indicator = document.createElement('div');
+        indicator.id = 'loadingIndicator';
+        indicator.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: flex; align-items: center;
+            justify-content: center; z-index: 10000; color: white;
+            font-size: 18px; font-family: 'Sarabun', sans-serif;
+        `;
+        indicator.innerHTML = `
+            <div style="text-align: center; background: white; color: #1e3c72; padding: 30px; border-radius: 15px;">
+                <div class="spinner"></div>
+                <div style="margin-top: 20px; font-weight: 600;">${message}</div>
+            </div>
+        `;
+        document.body.appendChild(indicator);
+    }
+
+    function hideLoadingIndicator() {
+        const indicator = document.getElementById('loadingIndicator');
+        if (indicator) indicator.remove();
+    }
+
+    function showSuccessMessage(message) {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; align-items: center;
+            justify-content: center; z-index: 10001; font-family: 'Sarabun', sans-serif;
+        `;
+        modal.innerHTML = `
+            <div style="background: white; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <h3 style="color: #28a745; margin-bottom: 15px;">✅ สำเร็จ</h3>
+                <p style="margin-bottom: 20px;">${message}</p>
+                <button onclick="this.closest('div').parentElement.remove()" class="btn btn-success">ตกลง</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        setTimeout(() => modal.remove(), 3000);
+    }
+
+    function showErrorMessage(message) {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: flex; align-items: center;
+            justify-content: center; z-index: 10001; font-family: 'Sarabun', sans-serif;
+        `;
+        modal.innerHTML = `
+            <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <h3 style="color: #dc3545; margin-bottom: 15px;">⚠️ เกิดข้อผิดพลาด</h3>
+                <p style="margin-bottom: 25px; line-height: 1.6;">${message}</p>
+                <button onclick="this.closest('div').parentElement.remove()" class="btn btn-danger">ปิด</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
     // ========================================
-    // Global Utility Functions
+    // Core UI Functions
     // ========================================
+    
+    function updateUI() {
+        const activeTab = document.querySelector('.nav-tab.active');
+        if (activeTab) {
+            const tabId = activeTab.getAttribute('onclick').match(/'([^']+)'/)[1];
+            showTab({currentTarget: activeTab}, tabId);
+        }
+    }
+
+    function showTab(event, tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+        
+        document.getElementById(tabName).classList.add('active');
+        event.currentTarget.classList.add('active');
+
+        switch (tabName) {
+            case 'dashboard': loadDashboard(); break;
+            case 'activities': loadActivities(); break;
+            case 'reports': loadReports(); break;
+            case 'checker': loadCheckerApprovals(); break;
+            case 'approval': loadDirectorApprovals(); break;
+            case 'students': loadStudents(); break;
+            case 'teachers': loadTeachers(); break;
+        }
+    }
+
+    function loadDashboard() {
+        document.getElementById('totalActivities').textContent = activitiesData.length;
+        
+        const uniqueWeeks = new Set(activitiesData.map(a => {
+            const date = new Date(a.date);
+            const firstDay = new Date(date.setDate(date.getDate() - date.getDay()));
+            return firstDay.toISOString().split('T')[0];
+        }));
+        document.getElementById('totalWeeks').textContent = uniqueWeeks.size;
+        
+        const { passed, failed } = calculateOverallAttendance();
+        document.getElementById('passedStudents').textContent = passed;
+        document.getElementById('failedStudents').textContent = failed;
+    }
+
+    function loadActivities() {
+        const container = document.getElementById('activityList');
+        if (activitiesData.length === 0) {
+            container.innerHTML = '<p class="loading-placeholder">ยังไม่มีกิจกรรมที่บันทึกไว้</p>';
+            return;
+        }
+        container.innerHTML = activitiesData.slice().reverse().map(activity => `
+            <div class="data-item" onclick="viewActivityDetail('${activity.id}')">
+                <h3>${activity.name}</h3>
+                <div class="data-meta">
+                    <span>📅 ${new Date(activity.date).toLocaleDateString('th-TH')}</span>
+                    <span>🎯 ${activity.grade}</span>
+                    <span>📍 ${activity.location}</span>
+                    <span>👤 ${activity.responsible}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function loadReports() {
+        const container = document.getElementById('reportTable');
+        const reportData = calculateStudentReports();
+        if (reportData.length === 0) {
+            container.innerHTML = '<tr><td colspan="9" class="loading-placeholder">ไม่มีข้อมูลนักเรียนสำหรับทำรายงาน</td></tr>';
+            return;
+        }
+        container.innerHTML = reportData.map(s => `
+            <tr>
+                <td>${s.index}</td>
+                <td>${s.name}</td>
+                <td>${s.grade}</td>
+                <td class="text-center" style="color: #28a745;">${s.present}</td>
+                <td class="text-center" style="color: #ffc107;">${s.leave}</td>
+                <td class="text-center" style="color: #dc3545;">${s.absent}</td>
+                <td class="text-center" style="color: #e83e8c;">${s.skip}</td>
+                <td class="text-center"><strong>${s.percentage}%</strong></td>
+                <td class="text-center">
+                    <span class="status-badge ${s.status === 'ผ่าน' ? 'status-pass' : (s.status === 'ไม่มีข้อมูล' ? '' : 'status-fail')}">${s.status}</span>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function loadStudents() {
+        const container = document.getElementById('studentList');
+        if(studentsData.length === 0) {
+            container.innerHTML = '<p class="loading-placeholder">ยังไม่มีข้อมูลนักเรียน</p>';
+            return;
+        }
+        container.innerHTML = studentsData.map((student, index) => `
+            <div class="data-item" style="cursor: default;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                    <div>
+                        <h3>${index + 1}. ${student.name}</h3>
+                        <div class="data-meta">
+                            <span>🎓 ${student.grade}</span>
+                            <span>📋 เลขที่ ${student.number}</span>
+                        </div>
+                    </div>
+                    <div style="flex-shrink: 0;">
+                        <button class="btn" onclick="editStudent('${student.id}')">แก้ไข</button>
+                        <button class="btn btn-danger" onclick="deleteStudentConfirm('${student.id}')">ลบ</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function loadTeachers() {
+        const container = document.getElementById('teacherList');
+        if(teachersData.length === 0) {
+            container.innerHTML = '<p class="loading-placeholder">ยังไม่มีข้อมูลผู้กำกับ</p>';
+            return;
+        }
+        container.innerHTML = teachersData.map((teacher, index) => `
+            <div class="data-item" style="cursor: default;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                    <div>
+                        <h3>${index + 1}. ${teacher.name}</h3>
+                        <div class="data-meta">
+                            <span>📧 ${teacher.email || '-'}</span>
+                            <span>📱 ${teacher.phone || '-'}</span>
+                        </div>
+                    </div>
+                    <div style="flex-shrink: 0;">
+                        <button class="btn" onclick="editTeacher('${teacher.id}')">แก้ไข</button>
+                        <button class="btn btn-danger" onclick="deleteTeacherConfirm('${teacher.id}')">ลบ</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function loadCheckerApprovals() {
+        const pendingCheck = activitiesData.filter(activity => !activity.checker);
+        const container = document.getElementById('checkerList');
+        if (pendingCheck.length === 0) {
+            container.innerHTML = '<p class="loading-placeholder">ไม่มีรายงานรอการตรวจสอบ</p>';
+            return;
+        }
+        container.innerHTML = pendingCheck.slice().reverse().map(activity => `
+            <div class="approval-box checker-only">
+                <h3>${activity.name} - ${activity.grade}</h3>
+                <div class="data-meta" style="margin-bottom: 15px;">
+                    <span>📅 ${new Date(activity.date).toLocaleDateString('th-TH')}</span>
+                    <span>👤 ผู้รายงาน: ${activity.reporter || '-'}</span>
+                </div>
+                <button class="btn" onclick="viewActivityDetail('${activity.id}')">ดูรายละเอียดและตรวจสอบ</button>
+            </div>
+        `).join('');
+    }
+
+    function loadDirectorApprovals() {
+        const pendingApproval = activitiesData.filter(activity => activity.checker && !activity.approver);
+        const container = document.getElementById('approvalList');
+        if (pendingApproval.length === 0) {
+            container.innerHTML = '<p class="loading-placeholder">ไม่มีรายงานรอการอนุมัติ</p>';
+            return;
+        }
+        container.innerHTML = pendingApproval.slice().reverse().map(activity => `
+            <div class="approval-box approval-only">
+                <h3>${activity.name} - ${activity.grade}</h3>
+                <div class="data-meta" style="margin-bottom: 15px;">
+                    <span>📅 ${new Date(activity.date).toLocaleDateString('th-TH')}</span>
+                    <span>✅ ตรวจโดย: ${activity.checker}</span>
+                </div>
+                <button class="btn" onclick="viewActivityDetail('${activity.id}')">ดูรายละเอียดและอนุมัติ</button>
+            </div>
+        `).join('');
+    }
+
+    // ========================================
+    // Calculation Functions
+    // ========================================
+    
+    function calculateOverallAttendance() {
+        let passed = 0, failed = 0;
+        calculateStudentReports().forEach(report => {
+            if (report.status === 'ผ่าน') passed++;
+            else if (report.status === 'ไม่ผ่าน') failed++;
+        });
+        return { passed, failed };
+    }
+
+    function calculateStudentReports() {
+        if (studentsData.length === 0) return [];
+        return studentsData.map((student, index) => {
+            let present = 0, leave = 0, absent = 0, skip = 0;
+            const activitiesForGrade = activitiesData.filter(a => a.grade === student.grade);
+            
+            activitiesForGrade.forEach(activity => {
+                if (activity.attendance) {
+                    const record = activity.attendance.find(r => r.studentId === student.id);
+                    if (record) {
+                        switch (record.status) {
+                            case 'present': present++; break;
+                            case 'leave': leave++; break;
+                            case 'absent': absent++; break;
+                            case 'skip': skip++; break;
+                        }
+                    }
+                }
+            });
+            
+            const totalAttended = present + leave;
+            const totalPossible = activitiesForGrade.length;
+            const percentage = totalPossible > 0 ? ((totalAttended / totalPossible) * 100).toFixed(0) : 0;
+            const status = totalPossible > 0 ? (percentage >= 80 ? 'ผ่าน' : 'ไม่ผ่าน') : 'ไม่มีข้อมูล';
+            
+            return { 
+                ...student, 
+                present, leave, absent, skip, 
+                percentage, status, 
+                index: index + 1 
+            };
+        });
+    }
+
+    // ========================================
+    // Form Functions
+    // ========================================
+    
     function getStudentsByGrade(grade) {
         if (!grade) return '<tr><td colspan="3" class="loading-placeholder">กรุณาเลือกระดับชั้นเพื่อแสดงรายชื่อ</td></tr>';
         
@@ -848,668 +1380,115 @@
                 </td>
             </tr>
         `).join('');
-    };
-
-    function previewImage(input, previewId) {
-        const previewContainer = document.getElementById(previewId);
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                previewContainer.innerHTML = `
-                    <img src="${e.target.result}" alt="Preview" style="max-width: 100%; max-height: 80px; border-radius: 5px; margin-bottom: 5px;">
-                    <button type="button" onclick="removeImage('${input.id}', '${previewId}')" style="background:none; border:none; color:red; cursor:pointer; font-size:12px;">ลบ</button>
-                `;
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
     }
 
-    function removeImage(inputId, previewId) {
-        document.getElementById(inputId).value = ""; // Clear the file input
-        document.getElementById(previewId).innerHTML = `📷 รูปที่ ${previewId.match(/\d+/)[0]}`; // Reset preview text
-    }
-    
-    // ========================================
-    // Tab Navigation
-    // ========================================
-    function showTab(event, tabName) {
-        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
-        
-        document.getElementById(tabName).classList.add('active');
-        event.currentTarget.classList.add('active');
-
-        switch (tabName) {
-            case 'dashboard': loadDashboard(); break;
-            case 'activities': loadActivities(); break;
-            case 'reports': loadReports(); break;
-            case 'checker': loadCheckerApprovals(); break;
-            case 'approval': loadDirectorApprovals(); break;
-            case 'students': loadStudents(); break;
-            case 'teachers': loadTeachers(); break;
-        }
-    }
-
-    // ========================================
-    // Data Loading
-    // ========================================
-    async function loadData(forceRefresh = false) {
-        if (studentsData.length > 0 && !forceRefresh) return Promise.resolve();
-
-        // ตรวจสอบ URL ก่อน
-        if (!ORIGINAL_API_URL || ORIGINAL_API_URL === 'YOUR_NEW_GOOGLE_APPS_SCRIPT_URL_HERE') {
-            console.log('❌ กรุณาใส่ URL ของ Google Apps Script ในโค้ด');
-            showManualSetupInstructions();
-            loadMockData();
-            return;
-        }
-
-        showLoadingIndicator();
-        console.log('🔄 เริ่มโหลดข้อมูล...');
-
-        // ลองหลายวิธีตามลำดับ
-        const methods = [
-            { name: 'JSONP', func: loadWithJSONP },
-            { name: 'Direct Fetch', func: loadWithDirectFetch },
-            { name: 'Proxy', func: loadWithProxy }
-        ];
-
-        for (let i = 0; i < methods.length; i++) {
-            try {
-                console.log(`🔄 ลองวิธีที่ ${i + 1}: ${methods[i].name}...`);
-                await methods[i].func();
-                
-                if (studentsData.length > 0 || activitiesData.length > 0 || teachersData.length > 0) {
-                    console.log(`✅ โหลดข้อมูลสำเร็จด้วยวิธี: ${methods[i].name}`);
-                    hideLoadingIndicator();
-                    saveCachedData();
-                    updateUI();
-                    return;
-                }
-            } catch (error) {
-                console.log(`❌ วิธี ${methods[i].name} ล้มเหลว:`, error.message);
-            }
-        }
-
-        // หากทุกวิธีล้มเหลว
-        console.log('❌ ทุกวิธีล้มเหลว กำลังใช้ข้อมูล cache หรือ mock data');
-        hideLoadingIndicator();
-        
-        if (!loadCachedData()) {
-            console.log('📝 ไม่มีข้อมูล cache โหลด mock data สำหรับทดสอบ');
-            loadMockData();
-            showErrorMessage(`
-                ไม่สามารถเชื่อมต่อกับ Google Apps Script ได้<br><br>
-                <strong>สาเหตุที่เป็นไปได้:</strong><br>
-                • URL ของ Web App ไม่ถูกต้อง<br>
-                • ยังไม่ได้ Deploy Google Apps Script<br>
-                • การตั้งค่า Permissions ไม่ถูกต้อง<br><br>
-                กำลังใช้ข้อมูลตัวอย่างสำหรับทดสอบ
-            `);
-        }
-    }
-    // ========================================
-    // วิธีการโหลดข้อมูลต่างๆ
-    // ========================================
-
-    function loadWithJSONP() {
-        return new Promise((resolve, reject) => {
-            const callbackName = 'dataCallback_' + Date.now();
-            const timeoutId = setTimeout(() => {
-                delete window[callbackName];
-                reject(new Error('JSONP timeout after 15 seconds'));
-            }, 15000);
-
-            window[callbackName] = function(data) {
-                clearTimeout(timeoutId);
-                try {
-                    if (data.success === false) {
-                        throw new Error(data.message || 'Server returned error');
-                    }
-                    
-                    studentsData = data.students || [];
-                    activitiesData = data.activities || [];
-                    teachersData = data.teachers || [];
-                    
-                    delete window[callbackName];
-                    if (script.parentNode) script.parentNode.removeChild(script);
-                    resolve();
-                } catch (error) {
-                    delete window[callbackName];
-                    if (script.parentNode) script.parentNode.removeChild(script);
-                    reject(error);
-                }
-            };
-
-            const script = document.createElement('script');
-            script.src = `${ORIGINAL_API_URL}?action=getData&callback=${callbackName}&_=${Date.now()}`;
-            script.onerror = () => {
-                clearTimeout(timeoutId);
-                delete window[callbackName];
-                reject(new Error('JSONP script load failed'));
-            };
-            
-            console.log('📡 Loading:', script.src);
-            document.head.appendChild(script);
-        });
-    }
-
-    async function loadWithDirectFetch() {
-        const response = await fetch(`${ORIGINAL_API_URL}?action=getData&_=${Date.now()}`, {
-            method: 'GET',
-            mode: 'cors',
-            headers: { 'Accept': 'application/json' }
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        
-        if (data.success === false) {
-            throw new Error(data.message || 'Server returned error');
-        }
-        
-        studentsData = data.students || [];
-        activitiesData = data.activities || [];
-        teachersData = data.teachers || [];
-    }
-
-    async function loadWithProxy() {
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(ORIGINAL_API_URL + '?action=getData')}`;
-        const response = await fetch(proxyUrl);
-
-        if (!response.ok) {
-            throw new Error(`Proxy failed: ${response.status}`);
-        }
-
-        const proxyData = await response.json();
-        const data = JSON.parse(proxyData.contents);
-        
-        if (data.success === false) {
-            throw new Error(data.message || 'Server returned error');
-        }
-        
-        studentsData = data.students || [];
-        activitiesData = data.activities || [];
-        teachersData = data.teachers || [];
-    }
-
-    // ========================================
-    // แสดงคำแนะนำการตั้งค่า
-    // ========================================
-    
-    function showManualSetupInstructions() {
-        const instructions = document.createElement('div');
-        instructions.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); display: flex; align-items: center;
-            justify-content: center; z-index: 10002; font-family: 'Sarabun', sans-serif;
-        `;
-        
-        instructions.innerHTML = `
-            <div style="background: white; padding: 30px; border-radius: 15px; max-width: 600px; text-align: left;">
-                <h3 style="color: #1e3c72; margin-bottom: 20px;">🔧 การตั้งค่า Google Apps Script</h3>
-                <ol style="line-height: 1.8;">
-                    <li>ไปที่ <strong>script.google.com</strong></li>
-                    <li>เปิดโปรเจค <strong>RPK56scout</strong></li>
-                    <li>คลิก <strong>"Deploy"</strong> → <strong>"New deployment"</strong></li>
-                    <li>เลือก Type: <strong>"Web app"</strong></li>
-                    <li>Execute as: <strong>"Me"</strong></li>
-                    <li>Who has access: <strong>"Anyone"</strong></li>
-                    <li>คลิก <strong>"Deploy"</strong> และอนุญาต permissions</li>
-                    <li>คัดลอก <strong>Web app URL</strong> ที่ได้</li>
-                    <li>แทนที่ในโค้ด JavaScript ตรง <code>ORIGINAL_API_URL</code></li>
-                </ol>
-                <div style="margin-top: 20px; text-align: center;">
-                    <button onclick="this.closest('div').parentElement.remove()" class="btn">ปิด</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(instructions);
-    }
-    // ========================================
-    // View Rendering Functions
-    // ========================================
-    function loadDashboard() {
-        document.getElementById('totalActivities').textContent = activitiesData.length;
-        const uniqueWeeks = new Set(activitiesData.map(a => {
-            const date = new Date(a.date);
-            const firstDay = new Date(date.setDate(date.getDate() - date.getDay()));
-            return firstDay.toISOString().split('T')[0];
-        }));
-        document.getElementById('totalWeeks').textContent = uniqueWeeks.size;
-        const { passed, failed } = calculateOverallAttendance();
-        document.getElementById('passedStudents').textContent = passed;
-        document.getElementById('failedStudents').textContent = failed;
-    }
-
-    function loadActivities() {
-        const container = document.getElementById('activityList');
-        if (activitiesData.length === 0) {
-            container.innerHTML = '<p class="loading-placeholder">ยังไม่มีกิจกรรมที่บันทึกไว้</p>';
-            return;
-        }
-        container.innerHTML = activitiesData.slice().reverse().map(activity => `
-            <div class="data-item" onclick="viewActivityDetail('${activity.id}')">
-                <h3>${activity.name}</h3>
-                <div class="data-meta">
-                    <span>📅 ${new Date(activity.date).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                    <span>🎯 ${activity.grade}</span>
-                    <span>📍 ${activity.location}</span>
-                    <span>👤 ${activity.responsible}</span>
-                </div>
-            </div>
-        `).join('');
-    }
-    
-    function loadReports() {
-         const container = document.getElementById('reportTable');
-         const reportData = calculateStudentReports();
-         if (reportData.length === 0) {
-             container.innerHTML = '<tr><td colspan="9" class="loading-placeholder">ไม่มีข้อมูลนักเรียนสำหรับทำรายงาน</td></tr>';
-             return;
-         }
-         container.innerHTML = reportData.map(s => `
-            <tr>
-                <td>${s.index}</td> <td>${s.name}</td> <td>${s.grade}</td>
-                <td class="text-center" style="color: #28a745;">${s.present}</td>
-                <td class="text-center" style="color: #ffc107;">${s.leave}</td>
-                <td class="text-center" style="color: #dc3545;">${s.absent}</td>
-                <td class="text-center" style="color: #e83e8c;">${s.skip}</td>
-                <td class="text-center"><strong>${s.percentage}%</strong></td>
-                <td class="text-center"><span class="status-badge ${s.status === 'ผ่าน' ? 'status-pass' : (s.status === 'ไม่มีข้อมูล' ? '' : 'status-fail')}">${s.status}</span></td>
-            </tr>
-         `).join('');
-    }
-    
-    function loadStudents() {
-        const container = document.getElementById('studentList');
-        if(studentsData.length === 0) {
-            container.innerHTML = '<p class="loading-placeholder">ยังไม่มีข้อมูลนักเรียน</p>';
-            return;
-        }
-        container.innerHTML = studentsData.map((student, index) => `
-            <div class="data-item" style="cursor: default;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-                    <div>
-                        <h3>${index + 1}. ${student.name}</h3>
-                        <div class="data-meta"><span>🎓 ${student.grade}</span><span>📋 เลขที่ ${student.number}</span></div>
-                    </div>
-                    <div style="flex-shrink: 0;"><button class="btn" onclick="editStudent('${student.id}')">แก้ไข</button> <button class="btn btn-danger" onclick="deleteStudent('${student.id}')">ลบ</button></div>
-                </div>
-            </div>
-        `).join('');
-    }
-    
-    function loadTeachers() {
-        const container = document.getElementById('teacherList');
-         if(teachersData.length === 0) {
-            container.innerHTML = '<p class="loading-placeholder">ยังไม่มีข้อมูลผู้กำกับ</p>';
-            return;
-        }
-        container.innerHTML = teachersData.map((teacher, index) => `
-            <div class="data-item" style="cursor: default;">
-                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-                    <div>
-                        <h3>${index + 1}. ${teacher.name}</h3>
-                        <div class="data-meta"><span>📧 ${teacher.email || '-'}</span><span>📱 ${teacher.phone || '-'}</span></div>
-                    </div>
-                    <div style="flex-shrink: 0;"><button class="btn" onclick="editTeacher('${teacher.id}')">แก้ไข</button> <button class="btn btn-danger" onclick="deleteTeacher('${teacher.id}')">ลบ</button></div>
-                </div>
-            </div>
-        `).join('');
-    }
-    
-    function loadCheckerApprovals() {
-        const pendingCheck = activitiesData.filter(activity => !activity.checker);
-        const container = document.getElementById('checkerList');
-        if (pendingCheck.length === 0) {
-            container.innerHTML = '<p class="loading-placeholder">ไม่มีรายงานรอการตรวจสอบ</p>'; return;
-        }
-        container.innerHTML = pendingCheck.slice().reverse().map(activity => `
-            <div class="approval-box checker-only">
-                <h3>${activity.name} - ${activity.grade}</h3>
-                <div class="data-meta" style="margin-bottom: 15px;">
-                    <span>📅 ${new Date(activity.date).toLocaleDateString('th-TH')}</span>
-                    <span>👤 ผู้รายงาน: ${activity.reporter || '-'}</span>
-                </div>
-                <button class="btn" onclick="viewActivityDetail('${activity.id}')">ดูรายละเอียดและตรวจสอบ</button>
-            </div>
-        `).join('');
-    }
-
-    function loadDirectorApprovals() {
-        const pendingApproval = activitiesData.filter(activity => activity.checker && !activity.approver);
-        const container = document.getElementById('approvalList');
-        if (pendingApproval.length === 0) {
-            container.innerHTML = '<p class="loading-placeholder">ไม่มีรายงานรอการอนุมัติ</p>'; return;
-        }
-        container.innerHTML = pendingApproval.slice().reverse().map(activity => `
-            <div class="approval-box approval-only">
-                <h3>${activity.name} - ${activity.grade}</h3>
-                <div class="data-meta" style="margin-bottom: 15px;">
-                     <span>📅 ${new Date(activity.date).toLocaleDateString('th-TH')}</span>
-                     <span>✅ ตรวจโดย: ${activity.checker}</span>
-                </div>
-                <button class="btn" onclick="viewActivityDetail('${activity.id}')">ดูรายละเอียดและอนุมัติ</button>
-            </div>
-        `).join('');
-    }
-    
-    // ========================================
-    // Calculation & Utility Functions
-    // ========================================
-    function calculateOverallAttendance() {
-        let passed = 0, failed = 0;
-        calculateStudentReports().forEach(report => {
-            if (report.status === 'ผ่าน') passed++;
-            else if (report.status === 'ไม่ผ่าน') failed++;
-        });
-        return { passed, failed };
-    }
-
-    function calculateStudentReports() {
-         if (studentsData.length === 0) return [];
-         return studentsData.map((student, index) => {
-            let present = 0, leave = 0, absent = 0, skip = 0;
-            const activitiesForGrade = activitiesData.filter(a => a.grade === student.grade);
-            activitiesForGrade.forEach(activity => {
-                if (activity.attendance) {
-                    const record = activity.attendance.find(r => r.studentId === student.id);
-                    if (record) {
-                        switch (record.status) {
-                            case 'present': present++; break; case 'leave': leave++; break;
-                            case 'absent': absent++; break; case 'skip': skip++; break;
-                        }
-                    }
-                }
-            });
-            const totalAttended = present + leave;
-            const totalPossible = activitiesForGrade.length;
-            const percentage = totalPossible > 0 ? ((totalAttended / totalPossible) * 100).toFixed(0) : 0;
-            const status = totalPossible > 0 ? (percentage >= 80 ? 'ผ่าน' : 'ไม่ผ่าน') : 'ไม่มีข้อมูล';
-            return { ...student, present, leave, absent, skip, percentage, status, index: index + 1 };
-         });
-    }
-    
     function createModal(id, title, content, maxWidth = '900px') {
         const existingModal = document.getElementById(id);
         if(existingModal) existingModal.remove();
+        
         const modal = document.createElement('div');
         modal.id = id;
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal-content" style="max-width: ${maxWidth};">
-                <header class="modal-header"><h2>${title}</h2><button class="close-btn" onclick="document.getElementById('${id}').remove()">&times;</button></header>
+                <header class="modal-header">
+                    <h2>${title}</h2>
+                    <button class="close-btn" onclick="document.getElementById('${id}').remove()">&times;</button>
+                </header>
                 <div class="modal-body">${content}</div>
             </div>
         `;
-        modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
+        modal.addEventListener('click', e => { 
+            if(e.target === modal) modal.remove(); 
+        });
         document.body.appendChild(modal);
         requestAnimationFrame(() => modal.classList.add('active'));
     }
+
+    // ========================================
+    // Form Modal Functions
+    // ========================================
     
-    // ========================================
-    // Detail View & Approval Section
-    // ========================================
-    function viewActivityDetail(activityId) {
-    const activity = activitiesData.find(a => a.id === activityId);
-    if (!activity) { alert('ไม่พบกิจกรรมนี้'); return; }
-    
-    let total = 0, present = 0, leave = 0, absent = 0, skip = 0;
-    if (activity.attendance) {
-        total = activity.attendance.length;
-        activity.attendance.forEach(r => {
-            if (r.status === 'present') present++; else if (r.status === 'leave') leave++;
-            else if (r.status === 'absent') absent++; else if (r.status === 'skip') skip++;
-        });
-    }
-
-    const imagesHtml = (activity.images && activity.images.length > 0) 
-        ? `<div class="image-upload-grid">${activity.images.map(imgSrc => `<div><img src="${imgSrc}" style="width:100%; height: auto; border-radius: 8px; border: 1px solid #ddd;"></div>`).join('')}</div>`
-        : '<p>ไม่มีรูปภาพสำหรับกิจกรรมนี้</p>';
-
-    const content = `
-        <div class="info-card">
-            <h3>📝 ข้อมูลกิจกรรม</h3>
-            <div class="info-grid">
-                <div><strong>📅 วันที่:</strong> <span>${new Date(activity.date).toLocaleDateString('th-TH')}</span></div>
-                <div><strong>🎯 ระดับชั้น:</strong> <span>${activity.grade}</span></div>
-                <div><strong>📍 สถานที่:</strong> <span>${activity.location}</span></div>
-                <div><strong>👤 ผู้รับผิดชอบ:</strong> <span>${activity.responsible}</span></div>
-                <div><strong>📝 ผู้รายงาน:</strong> <span>${activity.reporter || '-'}</span></div>
-                <div><strong>⏰ เวลาส่งรายงาน:</strong> <span>${new Date(parseInt(activity.id.split('_')[1])).toLocaleString('th-TH')}</span></div>
-            </div>
-            <div style="margin-top: 15px;"><strong>📋 รายละเอียดกิจกรรม:</strong><div class="description-box">${activity.description}</div></div>
-        </div>
-        <div class="info-card"><h3>📷 ภาคกิจกรรม</h3>${imagesHtml}</div>
-        <div class="info-card">
-            <h3>📊 สถิติการเข้าร่วม</h3>
-            <div class="attendance-stats">
-                <div class="stat-item"><div class="number" style="color: #1e3c72;">${total}</div><div class="label">ทั้งหมด</div></div>
-                <div class="stat-item"><div class="number" style="color: #28a745;">${present}</div><div class="label">มา</div></div>
-                <div class="stat-item"><div class="number" style="color: #ffc107;">${leave}</div><div class="label">ลา</div></div>
-                <div class="stat-item"><div class="number" style="color: #dc3545;">${absent}</div><div class="label">ขาด</div></div>
-                <div class="stat-item"><div class="number" style="color: #e83e8c;">${skip}</div><div class="label">โดด</div></div>
-            </div>
-        </div>
-         <div class="info-card"><h3>สถานะการดำเนินการ</h3>${renderApprovalSection(activity)}</div>`;
-    createModal(`activityDetail_${activity.id}`, `รายละเอียดกิจกรรม: ${activity.name}`, content);
-}
-
-    function generatePDFReport(activityId) {
-    const activity = activitiesData.find(a => a.id === activityId);
-    if (!activity) { return alert('ไม่พบข้อมูลกิจกรรม'); }
-
-    let total = 0, present = 0, absent = 0, leave = 0, skip = 0;
-    if (activity.attendance) {
-        activity.attendance.forEach(r => {
-            total++;
-            switch(r.status) {
-                case 'present': present++; break; case 'leave': leave++; break;
-                case 'absent': absent++; break; case 'skip': skip++; break;
-            }
-        });
-    }
-    
-    const imageBoxes = (activity.images && activity.images.length > 0)
-        ? activity.images.map(imgSrc => `<div class="photo-box"><img src="${imgSrc}" alt="Activity Photo"></div>`).join('')
-        : Array(4).fill('<div class="photo-box empty"><span style="color: #999; font-size: 12px;">ไม่มีรูปภาพ</span></div>').join('');
-
-    const printHtml = `
-        <!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานการปฏิบัติกิจกรรมของลูกเสือ - ${activity.name}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
-        <style>
-            @page {
-                size: A4;
-                margin: 1.5cm;
-            }
-            body { 
-                font-family: 'Sarabun', sans-serif; 
-                font-size: 14px; 
-                line-height: 1.6;
-            }
-            .header, .signatures-section { text-align: center; }
-            .header h1 { font-size: 18px; margin: 0; font-weight: 700; }
-            .header h2 { font-size: 16px; margin: 5px 0 0 0; font-weight: normal; }
-            .content { margin-top: 1cm; }
-            .field { 
-                margin-bottom: 0.4cm; 
-                display: flex;
-                border-bottom: 1px dotted #ccc;
-                padding-bottom: 4px;
-            }
-            .field-label { 
-                display: inline-block; 
-                width: 150px; 
-                font-weight: 700;
-                flex-shrink: 0;
-            }
-            .field-value {
-                display: inline-block;
-            }
-            .photo-section-header {
-                font-weight: 700;
-                font-size: 16px;
-                margin-top: 0.8cm;
-                margin-bottom: 0.4cm;
-            }
-            .photo-grid { 
-                display: grid; 
-                grid-template-columns: 1fr 1fr; 
-                gap: 0.5cm; 
-                page-break-inside: avoid; 
-            }
-            .photo-box { 
-                border: 1px solid #000; 
-                height: 4.5cm; 
-                display: flex; 
-                align-items: center; 
-                justify-content: center; 
-                overflow: hidden;
-            }
-            .photo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
-            
-            .signatures-section { 
-                display: grid; 
-                grid-template-columns: 1fr 1fr 1fr; 
-                gap: 1cm; 
-                margin-top: 1.5cm; 
-                page-break-inside: avoid; 
-            }
-            .sig-box { 
-                display: flex; 
-                flex-direction: column; 
-                justify-content: flex-end; 
-                height: 3cm; /* Adjusted height */
-            }
-            .line { 
-                border-bottom: 1px dotted #000; 
-                margin-bottom: 5px; 
-                font-size: 12px; /* To hold space for signature */
-                color: transparent;
-            }
-            .sig-name { font-weight: normal; }
-            .sig-title { font-size: 12px; }
-
-            @media print {
-                body { margin: 0; }
-            }
-        </style>
-        </head><body>
-            <div class="header">
-                <h1>รายงานการปฏิบัติกิจกรรมของลูกเสือ</h1>
-                <h2>โรงเรียนราชประชานุเคราะห์ ๕๖</h2>
-            </div>
-            <div class="content">
-                <div class="field"><span class="field-label">วันที่จัดกิจกรรม:</span> <span class="field-value">${new Date(activity.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
-                <div class="field"><span class="field-label">ระดับชั้น:</span> <span class="field-value">${activity.grade}</span></div>
-                <div class="field"><span class="field-label">ชื่อกิจกรรม:</span> <span class="field-value">${activity.name}</span></div>
-                <div class="field"><span class="field-label">รายละเอียดกิจกรรม:</span> <span class="field-value">${activity.description}</span></div>
-                <div class="field"><span class="field-label">สถานที่จัดกิจกรรม:</span> <span class="field-value">${activity.location}</span></div>
-                <div class="field"><span class="field-label">ผู้รับผิดชอบ:</span> <span class="field-value">${activity.responsible}</span></div>
-                <div class="field"><span class="field-label">สรุปการเข้าร่วม:</span> <span class="field-value">นักเรียน ${total} คน (มา ${present}, ลา ${leave}, ขาด ${absent}, โดด ${skip})</span></div>
-                
-                <div class="photo-section-header">ภาคกิจกรรม:</div>
-                <div class="photo-grid">${imageBoxes}</div>
-            </div>
-            <div class="signatures-section">
-                <div class="sig-box">
-                    <div class="line">ลงชื่อ</div>
-                    <div class="sig-name">( ${activity.reporter || '...................................'} )</div>
-                    <div class="sig-title">ผู้รายงาน</div>
-                </div>
-                <div class="sig-box">
-                    <div class="line">ลงชื่อ</div>
-                    <div class="sig-name">( ${activity.checker || 'นางปณิตา ปัญญานะ'} )</div>
-                    <div class="sig-title">ผู้ตรวจสอบ</div>
-                </div>
-                <div class="sig-box">
-                    <div class="line">ลงชื่อ</div>
-                    <div class="sig-name">( ${activity.approver || 'นางภิรญา สอนศิริ'} )</div>
-                    <div class="sig-title">รองผู้อำนวยการสถานศึกษา</div>
-                </div>
-            </div>
-        </body></html>`;
-
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(printHtml);
-    printWindow.document.close();
-    printWindow.onload = () => { 
-        printWindow.focus(); // A small helper for some browsers
-        printWindow.print(); 
-    };
-}
-    function renderApprovalSection(activity) {
-    let checkerHtml, approverHtml, printButton = '';
-
-    if (activity.approver) {
-        printButton = `<button class="btn btn-success" style="margin-top: 10px;" onclick="generatePDFReport('${activity.id}')">🖨️ พิมพ์รายงาน PDF</button>`;
-    }
-
-    if (!activity.checker) {
-        checkerHtml = `<div class="approval-box"><h4>✅ การตรวจสอบ (นางปณิตา ปัญญานะ)</h4><p style="color: #ffc107;"><strong>สถานะ:</strong> ⏳ รอตรวจสอบ</p><div class="form-group" style="margin-top:10px;"><input type="password" id="checkPass_${activity.id}" placeholder="รหัสผ่าน (check123)"></div><div class="form-group"><textarea id="checkComment_${activity.id}" placeholder="ความคิดเห็น (ถ้ามี)"></textarea></div><button class="btn btn-success" onclick="submitCheck('${activity.id}')">ยืนยันการตรวจสอบ</button></div>`;
-    } else {
-        checkerHtml = `<div class="approval-box"><h4>✅ การตรวจสอบ (นางปณิตา ปัญญานะ)</h4><p style="color: #28a745;"><strong>สถานะ:</strong> ✔️ ตรวจแล้ว</p><p><strong>ผู้ตรวจ:</strong> ${activity.checker}</p><p><strong>วันที่ตรวจ:</strong> ${activity.checkerDate}</p><p><strong>ความคิดเห็น:</strong> ${activity.checkerComment || 'ไม่มี'}</p></div>`;
-    }
-    if (!activity.checker) {
-        approverHtml = `<div class="approval-box"><h4 style="color:#6c757d;">🔖 การอนุมัติ (นางภิรญา สอนศิริ)</h4><p><strong>สถานะ:</strong> ⏸️ รอตรวจสอบก่อน</p></div>`;
-    } else if (!activity.approver) {
-        approverHtml = `<div class="approval-box"><h4>🔖 การอนุมัติ (นางภิรญา สอนศิริ)</h4><p style="color: #ffc107;"><strong>สถานะ:</strong> ⏳ รออนุมัติ</p><div class="form-group" style="margin-top:10px;"><input type="password" id="approvePass_${activity.id}" placeholder="รหัสผ่าน (admin999)"></div><div class="form-group"><select id="approveStatus_${activity.id}"><option value="ผ่าน">✅ ผ่าน</option><option value="ไม่ผ่าน">❌ ไม่ผ่าน</option></select></div><div class="form-group"><textarea id="approveComment_${activity.id}" placeholder="ความคิดเห็น (ถ้ามี)"></textarea></div><button class="btn btn-success" onclick="submitApproval('${activity.id}')">ยืนยันการอนุมัติ</button></div>`;
-    } else {
-        approverHtml = `<div class="approval-box"><h4>🔖 การอนุมัติ (นางภิรญา สอนศิริ)</h4><p style="color: ${activity.approvalStatus === 'ผ่าน' ? '#28a745' : '#dc3545'};"><strong>สถานะ:</strong> ${activity.approvalStatus === 'ผ่าน' ? '✔️ ผ่าน' : '❌ ไม่ผ่าน'}</p><p><strong>ผู้อนุมัติ:</strong> ${activity.approver}</p><p><strong>วันที่อนุมัติ:</strong> ${activity.approverDate}</p><p><strong>ความคิดเห็น:</strong> ${activity.approverComment || 'ไม่มี'}</p>${printButton}</div>`;
-    }
-    return `<div style="display:grid; grid-template-columns: 1fr; gap: 15px;  @media (min-width: 768px) { grid-template-columns: 1fr 1fr; }">${checkerHtml}${approverHtml}</div>`;
-}
-    // ========================================
-    // Form Modal Creation
-    // ========================================
     function openActivityForm() {
-    const teacherOptions = teachersData.map(t => `<option value="${t.name}">${t.name}</option>`).join('') + '<option value="manual">กรอกด้วยตนเอง</option>';
-    const content = `
-        <form id="activityFormNew" onsubmit="submitActivityForm(event)">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div class="form-group"><label>วันที่จัดกิจกรรม *</label><input type="date" name="activityDate" required value="${new Date().toISOString().split('T')[0]}"></div>
-                <div class="form-group"><label>หน่วย/ระดับชั้น *</label><select name="grade" required onchange="document.getElementById('attendanceList').innerHTML = getStudentsByGrade(this.value);"><option value="">-- เลือกระดับชั้น --</option><option value="ป.1">ประถมศึกษาปีที่ 1</option><option value="ป.2">ประถมศึกษาปีที่ 2</option><option value="ป.3/1">ประถมศึกษาปีที่ 3/1</option><option value="ป.3/2">ประถมศึกษาปีที่ 3/2</option><option value="ป.4/1">ประถมศึกษาปีที่ 4/1</option><option value="ป.4/2">ประถมศึกษาปีที่ 4/2</option><option value="ป.5/1">ประถมศึกษาปีที่ 5/1</option><option value="ป.5/2">ประถมศึกษาปีที่ 5/2</option><option value="ป.6/1">ประถมศึกษาปีที่ 6/1</option><option value="ป.6/2">ประถมศึกษาปีที่ 6/2</option><option value="ป.6/3">ประถมศึกษาปีที่ 6/3</option></select></div>
-            </div>
-            <div class="form-group"><label>ชื่อกิจกรรม *</label><input type="text" name="activityName" required placeholder="เช่น การผูกเงื่อน, การปฐมพยาบาล"></div>
-            <div class="form-group"><label>รายละเอียดกิจกรรม *</label><textarea name="description" required placeholder="อธิบายกิจกรรมโดยละเอียด"></textarea></div>
-            <div class="form-group"><label>สถานที่จัด *</label><input type="text" name="location" required placeholder="เช่น สนามโรงเรียน, ห้องประชุม"></div>
-            <div class="form-group"><label>ผู้รับผิดชอบ *</label><select name="responsible" required onchange="document.getElementById('manualResponsibleWrapper').style.display = this.value === 'manual' ? 'block' : 'none';"><option value="">-- เลือกผู้กำกับ --</option>${teacherOptions}</select><div id="manualResponsibleWrapper" style="display:none; margin-top:10px;"><input type="text" name="responsibleManual" placeholder="กรอกชื่อผู้รับผิดชอบ"></div></div>
-            
-            <div class="form-group">
-                <label>รูปภาพกิจกรรม (สูงสุด 4 รูป)</label>
-                <div class="image-upload-grid">
-                    <div class="image-upload-box" onclick="document.getElementById('img1').click()">
-                        <span id="img1Preview">📷 รูปที่ 1</span>
-                        <input type="file" id="img1" name="img1" accept="image/*" style="display: none;" onchange="previewImage(this, 'img1Preview')">
+        const teacherOptions = teachersData.map(t => `<option value="${t.name}">${t.name}</option>`).join('') + '<option value="manual">กรอกด้วยตนเอง</option>';
+        const content = `
+            <form id="activityFormNew" onsubmit="submitActivityForm(event)">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label>วันที่จัดกิจกรรม *</label>
+                        <input type="date" name="activityDate" required value="${new Date().toISOString().split('T')[0]}">
                     </div>
-                    <div class="image-upload-box" onclick="document.getElementById('img2').click()">
-                        <span id="img2Preview">📷 รูปที่ 2</span>
-                        <input type="file" id="img2" name="img2" accept="image/*" style="display: none;" onchange="previewImage(this, 'img2Preview')">
-                    </div>
-                    <div class="image-upload-box" onclick="document.getElementById('img3').click()">
-                        <span id="img3Preview">📷 รูปที่ 3</span>
-                        <input type="file" id="img3" name="img3" accept="image/*" style="display: none;" onchange="previewImage(this, 'img3Preview')">
-                    </div>
-                    <div class="image-upload-box" onclick="document.getElementById('img4').click()">
-                        <span id="img4Preview">📷 รูปที่ 4</span>
-                        <input type="file" id="img4" name="img4" accept="image/*" style="display: none;" onchange="previewImage(this, 'img4Preview')">
+                    <div class="form-group">
+                        <label>หน่วย/ระดับชั้น *</label>
+                        <select name="grade" required onchange="document.getElementById('attendanceList').innerHTML = getStudentsByGrade(this.value);">
+                            <option value="">-- เลือกระดับชั้น --</option>
+                            <option value="ป.1">ประถมศึกษาปีที่ 1</option>
+                            <option value="ป.2">ประถมศึกษาปีที่ 2</option>
+                            <option value="ป.3/1">ประถมศึกษาปีที่ 3/1</option>
+                            <option value="ป.3/2">ประถมศึกษาปีที่ 3/2</option>
+                            <option value="ป.4/1">ประถมศึกษาปีที่ 4/1</option>
+                            <option value="ป.4/2">ประถมศึกษาปีที่ 4/2</option>
+                            <option value="ป.5/1">ประถมศึกษาปีที่ 5/1</option>
+                            <option value="ป.5/2">ประถมศึกษาปีที่ 5/2</option>
+                            <option value="ป.6/1">ประถมศึกษาปีที่ 6/1</option>
+                            <option value="ป.6/2">ประถมศึกษาปีที่ 6/2</option>
+                            <option value="ป.6/3">ประถมศึกษาปีที่ 6/3</option>
+                        </select>
                     </div>
                 </div>
-            </div>
+                <div class="form-group">
+                    <label>ชื่อกิจกรรม *</label>
+                    <input type="text" name="activityName" required placeholder="เช่น การผูกเงื่อน, การปฐมพยาบาล">
+                </div>
+                <div class="form-group">
+                    <label>รายละเอียดกิจกรรม *</label>
+                    <textarea name="description" required placeholder="อธิบายกิจกรรมโดยละเอียด"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>สถานที่จัด *</label>
+                    <input type="text" name="location" required placeholder="เช่น สนามโรงเรียน, ห้องประชุม">
+                </div>
+                <div class="form-group">
+                    <label>ผู้รับผิดชอบ *</label>
+                    <select name="responsible" required onchange="document.getElementById('manualResponsibleWrapper').style.display = this.value === 'manual' ? 'block' : 'none';">
+                        <option value="">-- เลือกผู้กำกับ --</option>
+                        ${teacherOptions}
+                    </select>
+                    <div id="manualResponsibleWrapper" style="display:none; margin-top:10px;">
+                        <input type="text" name="responsibleManual" placeholder="กรอกชื่อผู้รับผิดชอบ">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>เช็คชื่อนักเรียน</label>
+                    <div class="data-table-container" style="max-height: 350px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 8px;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">เลขที่</th>
+                                    <th>ชื่อ-นามสกุล</th>
+                                    <th class="text-center">สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceList">
+                                <tr><td colspan="3" class="loading-placeholder">กรุณาเลือกระดับชั้นเพื่อแสดงรายชื่อ</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>ผู้รายงาน *</label>
+                    <input type="text" name="reporter" required placeholder="ชื่อครูผู้รายงาน">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" onclick="document.getElementById('activityFormModal').remove()">ยกเลิก</button>
+                    <button type="submit" class="btn-submit">บันทึกกิจกรรม</button>
+                </div>
+            </form>
+        `;
+        createModal('activityFormModal', 'บันทึกกิจกรรมใหม่', content);
+    }
 
-            <div class="form-group"><label>เช็คชื่อนักเรียน</label><div class="data-table-container" style="max-height: 350px; overflow-y: auto; border: 1px solid #e9ecef; border-radius: 8px;"><table class="data-table"><thead><tr><th class="text-center">เลขที่</th><th>ชื่อ-นามสกุล</th><th class="text-center">สถานะ</th></tr></thead><tbody id="attendanceList"><tr><td colspan="3" class="loading-placeholder">กรุณาเลือกระดับชั้นเพื่อแสดงรายชื่อ</td></tr></tbody></table></div></div>
-            <div class="form-group"><label>ผู้รายงาน *</label><input type="text" name="reporter" required placeholder="ชื่อครูผู้รายงาน"></div>
-            <div class="form-actions"><button type="button" class="btn-cancel" onclick="document.getElementById('activityFormModal').remove()">ยกเลิก</button><button type="submit" class="btn-submit">บันทึกกิจกรรม</button></div>
-        </form>
-    `;
-    createModal('activityFormModal', 'บันทึกกิจกรรมใหม่', content);
-}
-    
     function openStudentForm() {
         const content = `
             <form id="studentFormNew" onsubmit="submitStudentForm(event)">
@@ -1521,11 +1500,17 @@
                     <label>ระดับชั้น *</label>
                     <select id="studentGrade" required>
                         <option value="">-- เลือกระดับชั้น --</option>
-                        <option value="ป.1">ประถมศึกษาปีที่ 1</option><option value="ป.2">ประถมศึกษาปีที่ 2</option>
-                        <option value="ป.3/1">ประถมศึกษาปีที่ 3/1</option><option value="ป.3/2">ประถมศึกษาปีที่ 3/2</option>
-                        <option value="ป.4/1">ประถมศึกษาปีที่ 4/1</option><option value="ป.4/2">ประถมศึกษาปีที่ 4/2</option>
-                        <option value="ป.5/1">ประถมศึกษาปีที่ 5/1</option><option value="ป.5/2">ประถมศึกษาปีที่ 5/2</option>
-                        <option value="ป.6/1">ประถมศึกษาปีที่ 6/1</option><option value="ป.6/2">ประถมศึกษาปีที่ 6/2</option><option value="ป.6/3">ประถมศึกษาปีที่ 6/3</option>
+                        <option value="ป.1">ประถมศึกษาปีที่ 1</option>
+                        <option value="ป.2">ประถมศึกษาปีที่ 2</option>
+                        <option value="ป.3/1">ประถมศึกษาปีที่ 3/1</option>
+                        <option value="ป.3/2">ประถมศึกษาปีที่ 3/2</option>
+                        <option value="ป.4/1">ประถมศึกษาปีที่ 4/1</option>
+                        <option value="ป.4/2">ประถมศึกษาปีที่ 4/2</option>
+                        <option value="ป.5/1">ประถมศึกษาปีที่ 5/1</option>
+                        <option value="ป.5/2">ประถมศึกษาปีที่ 5/2</option>
+                        <option value="ป.6/1">ประถมศึกษาปีที่ 6/1</option>
+                        <option value="ป.6/2">ประถมศึกษาปีที่ 6/2</option>
+                        <option value="ป.6/3">ประถมศึกษาปีที่ 6/3</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1566,295 +1551,32 @@
     }
 
     // ========================================
-    // Form & Action Submissions (ปรับปรุงใหม่ด้วย Fetch)
-    // ========================================
-    async function postData(action, data, successMessage) {
-        showLoadingIndicator();
-        console.log(`🚀 Sending data action: ${action}`);
-
-        try {
-            const payload = {
-                action: action,
-                ...data
-            };
-
-            // เราจะส่งข้อมูลเป็น JSON ไปที่ doPost
-            const response = await fetch(ORIGINAL_API_URL, {
-                method: 'POST',
-                mode: 'cors',
-                cache: 'no-cache',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-                redirect: 'follow' // Apps Script POST จะมีการ redirect
-            });
-
-            // เนื่องจาก Apps Script มีการ redirect เราจึงต้องอ่าน response เป็น text
-            // และเนื่องจากเราตั้งค่า CORS ใน code.gs ไว้อย่างถูกต้อง เราจะสามารถอ่าน response ได้
-            const resultText = await response.text();
-            let result;
-            
-            try {
-                result = JSON.parse(resultText);
-            } catch (jsonError) {
-                // ถ้า Apps Script พัง มันอาจจะส่ง HTML error กลับมา
-                console.error('Failed to parse JSON response:', resultText);
-                throw new Error('Server returned invalid data. Check Apps Script logs.');
-            }
-
-            if (result.success) {
-                hideLoadingIndicator();
-                if (successMessage) showSuccessMessage(successMessage);
-                return true;
-            } else {
-                throw new Error(result.message || 'Unknown server error');
-            }
-
-        } catch (error) {
-            console.error(`Post method failed:`, error);
-            hideLoadingIndicator();
-            showErrorMessage('เกิดข้อผิดพลาดในการส่งข้อมูล: ' + error.message);
-            return false;
-        }
-    }
-
-    // JSONP for POST (using GET with parameters)
-    function postWithJSONP(action, data) {
-        return new Promise((resolve, reject) => {
-            const callbackName = 'postCallback_' + Date.now();
-            const timeoutId = setTimeout(() => {
-                delete window[callbackName];
-                reject(new Error('JSONP post timeout'));
-            }, 15000);
-
-            window[callbackName] = function(result) {
-                clearTimeout(timeoutId);
-                delete window[callbackName];
-                if (script.parentNode) script.parentNode.removeChild(script);
-                resolve(result);
-            };
-
-            // Convert data to URL parameters
-            const params = new URLSearchParams();
-            params.append('action', action);
-            params.append('callback', callbackName);
-            
-            for (const [key, value] of Object.entries(data)) {
-                params.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
-            }
-
-            const script = document.createElement('script');
-            script.src = `${ORIGINAL_API_URL}?${params.toString()}`;
-            script.onerror = () => {
-                clearTimeout(timeoutId);
-                delete window[callbackName];
-                reject(new Error('JSONP post script load failed'));
-            };
-            
-            document.head.appendChild(script);
-        });
-    }
-    // iframe method (fallback)
-    function postWithIframe(action, data) {
-        return new Promise((resolve, reject) => {
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.name = 'hiddenFrame_' + Date.now();
-            
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = ORIGINAL_API_URL;
-            form.target = iframe.name;
-            
-            const payload = { action, ...data };
-            for (const [key, value] of Object.entries(payload)) {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = key;
-                input.value = typeof value === 'object' ? JSON.stringify(value) : value;
-                form.appendChild(input);
-            }
-            
-            const timeoutId = setTimeout(() => {
-                if (document.body.contains(iframe)) document.body.removeChild(iframe);
-                reject(new Error('iframe post timeout'));
-            }, 15000);
-
-            iframe.onload = function() {
-                clearTimeout(timeoutId);
-                try {
-                    const response = iframe.contentDocument.body.textContent;
-                    const result = JSON.parse(response);
-                    document.body.removeChild(iframe);
-                    resolve(result);
-                } catch (error) {
-                    document.body.removeChild(iframe);
-                    reject(new Error('Failed to parse iframe response'));
-                }
-            };
-            
-            iframe.onerror = function() {
-                clearTimeout(timeoutId);
-                if (document.body.contains(iframe)) document.body.removeChild(iframe);
-                reject(new Error('iframe load failed'));
-            };
-            
-            document.body.appendChild(iframe);
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-        });
-    }
+    // Form Submission Functions
     // ========================================
-    // UI Helper Functions
-    // ========================================
-    function updateUI() {
-        const activeTabButton = document.querySelector('.nav-tab.active');
-        const activeTabId = activeTabButton ? activeTabButton.getAttribute('onclick').match(/'([^']+)'/)[1] : 'dashboard';
-        showTab({currentTarget: activeTabButton || document.querySelector('.nav-tab')}, activeTabId);
-    }
-
-    function showLoadingIndicator() {
-        const existing = document.getElementById('loadingIndicator');
-        if (existing) existing.remove();
-
-        const indicator = document.createElement('div');
-        indicator.id = 'loadingIndicator';
-        indicator.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: flex; align-items: center;
-            justify-content: center; z-index: 10000; color: white;
-            font-size: 18px; font-family: 'Sarabun', sans-serif;
-        `;
-        indicator.innerHTML = `
-            <div style="text-align: center; background: white; color: #1e3c72; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-                <div class="spinner"></div>
-                <div style="margin-top: 20px; font-weight: 600;">กำลังเชื่อมต่อข้อมูล...</div>
-                <div style="margin-top: 10px; font-size: 14px; color: #666;">กำลังลองหลายวิธี กรุณารอสักครู่</div>
-            </div>
-        `;
-        document.body.appendChild(indicator);
-    }
-
-    function hideLoadingIndicator() {
-        const indicator = document.getElementById('loadingIndicator');
-        if (indicator) indicator.remove();
-    }
-
-    function showErrorMessage(message) {
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: flex; align-items: center;
-            justify-content: center; z-index: 10001; font-family: 'Sarabun', sans-serif;
-        `;
-        modal.innerHTML = `
-            <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-                <h3 style="color: #dc3545; margin-bottom: 15px; font-size: 20px;">⚠️ ปัญหาการเชื่อมต่อ</h3>
-                <div style="margin-bottom: 25px; line-height: 1.6; color: #666; text-align: left;">${message}</div>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button onclick="this.closest('div').parentElement.remove()" class="btn btn-danger">ปิด</button>
-                    <button onclick="showDebugPanel()" class="btn">เปิด Debug</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    }
-
-    function loadCachedData() {
-        try {
-            const cached = localStorage.getItem('scoutActivityData');
-            if (cached) {
-                const data = JSON.parse(cached);
-                const cacheAge = Date.now() - (data.timestamp || 0);
-                
-                studentsData = data.students || [];
-                activitiesData = data.activities || [];
-                teachersData = data.teachers || [];
-                
-                console.log(`📦 โหลดข้อมูล cache (อายุ: ${Math.round(cacheAge / 60000)} นาที)`);
-                updateUI();
-                return true;
-            }
-        } catch (e) {
-            console.log('❌ ไม่สามารถโหลด cache ได้');
-        }
-        return false;
-    }
-
-    function saveCachedData() {
-        try {
-            localStorage.setItem('scoutActivityData', JSON.stringify({
-                students: studentsData,
-                activities: activitiesData,
-                teachers: teachersData,
-                timestamp: Date.now()
-            }));
-            console.log('💾 บันทึกข้อมูลลง cache แล้ว');
-        } catch (e) {
-            console.log('❌ ไม่สามารถบันทึก cache ได้');
-        }
-    }
-// ========================================
-    // Connection Status Indicator
-    // ========================================
-    function showConnectionStatus() {
-        const status = document.createElement('div');
-        status.id = 'connectionStatus';
-        status.style.cssText = `
-            position: fixed; bottom: 20px; right: 20px;
-            background: #ffc107; color: #000; padding: 8px 15px;
-            border-radius: 20px; font-size: 12px; z-index: 1000;
-            font-family: 'Sarabun', sans-serif; font-weight: 600;
-        `;
-        status.innerHTML = '🔄 ใช้ข้อมูลออฟไลน์';
-        document.body.appendChild(status);
-        
-        setTimeout(() => status.remove(), 5000);
-    }
     
-    
-    // Helper function to convert file to Base64
-const fileToBase64 = file => new Promise((resolve, reject) => {
-    if (!file) {
-        resolve(null);
-        return;
-    }
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = error => reject(error);
-});
-
-async function submitActivityForm(event) {
-    event.preventDefault();
-    const form = event.target;
-    const submitButton = form.querySelector('.btn-submit');
-    submitButton.disabled = true;
-    submitButton.textContent = 'กำลังบันทึก...';
-
-    try {
+    async function submitActivityForm(event) {
+        event.preventDefault();
+        const form = event.target;
         const formData = new FormData(form);
         const grade = formData.get('grade');
+        
         if (!grade) {
             alert('กรุณาเลือกระดับชั้น');
             return;
         }
 
-        // Handle image uploads
-        const imageFiles = [form.querySelector('#img1').files[0], form.querySelector('#img2').files[0], form.querySelector('#img3').files[0], form.querySelector('#img4').files[0]];
-        const imageBase64Strings = await Promise.all(imageFiles.map(file => fileToBase64(file)));
-
         const attendance = studentsData
             .filter(student => student.grade === grade)
             .map(student => ({
-                studentId: student.id, studentName: student.name,
+                studentId: student.id,
+                studentName: student.name,
                 status: form.querySelector(`input[name="attendance_${student.id}"]:checked`)?.value || 'absent'
             }));
         
         let responsible = formData.get('responsible');
-        if (responsible === 'manual') responsible = formData.get('responsibleManual').trim();
+        if (responsible === 'manual') {
+            responsible = formData.get('responsibleManual').trim();
+        }
 
         const activityData = {
             id: 'ACT_' + Date.now(),
@@ -1866,7 +1588,7 @@ async function submitActivityForm(event) {
             responsible: responsible,
             reporter: formData.get('reporter').trim(),
             attendance: attendance,
-            images: imageBase64Strings.filter(img => img !== null) // Filter out empty uploads
+            images: []
         };
 
         if (!activityData.name || !activityData.description || !activityData.location || !activityData.responsible || !activityData.reporter) {
@@ -1874,64 +1596,65 @@ async function submitActivityForm(event) {
             return;
         }
 
-        const success = await postData('addActivity', activityData, 'บันทึกกิจกรรมสำเร็จ');
+        const success = await submitData('addActivity', activityData, 'บันทึกกิจกรรมสำเร็จ');
         if (success) {
             document.getElementById('activityFormModal').remove();
-            await loadData(true);
         }
-    } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = 'บันทึกกิจกรรม';
     }
-}
+
     async function submitStudentForm(event) {
         event.preventDefault();
         const studentData = {
+            id: 'STU_' + Date.now(),
             name: document.getElementById('studentName').value.trim(),
             grade: document.getElementById('studentGrade').value,
             number: document.getElementById('studentNumber').value
         };
+        
         if (!studentData.name || !studentData.grade || !studentData.number) {
             alert('กรุณากรอกข้อมูลให้ครบถ้วน');
             return;
         }
-        const success = await postData('addStudent', { id: 'STU_' + Date.now(), ...studentData }, 'เพิ่มนักเรียนสำเร็จ');
+
+        const success = await submitData('addStudent', studentData, 'เพิ่มนักเรียนสำเร็จ');
         if (success) {
             document.getElementById('studentFormModal').remove();
-            await loadData(true);
         }
     }
 
     async function submitTeacherForm(event) {
         event.preventDefault();
         const teacherData = {
+            id: 'TCH_' + Date.now(),
             name: document.getElementById('teacherName').value.trim(),
             email: document.getElementById('teacherEmail').value.trim(),
             phone: document.getElementById('teacherPhone').value.trim()
         };
+        
         if (!teacherData.name) {
             alert('กรุณากรอกชื่อ-นามสกุล');
             return;
         }
-        const success = await postData('addTeacher', { id: 'TCH_' + Date.now(), ...teacherData }, 'เพิ่มผู้กำกับสำเร็จ');
+
+        const success = await submitData('addTeacher', teacherData, 'เพิ่มผู้กำกับสำเร็จ');
         if (success) {
             document.getElementById('teacherFormModal').remove();
-            await loadData(true);
         }
     }
-    
-    // ========================================
-    // Student & Teacher Action Functions
-    // ========================================
 
+    // ========================================
+    // Edit/Delete Functions  
+    // ========================================
+    
     async function editStudent(id) {
         const student = studentsData.find(s => s.id === id);
         if (!student) {
-            return alert('ไม่พบข้อมูลนักเรียน');
+            alert('ไม่พบข้อมูลนักเรียน');
+            return;
         }
 
         const name = prompt('แก้ไขชื่อ-นามสกุล:', student.name);
-        if (name === null) return; // User clicked cancel
+        if (name === null) return;
 
         const grade = prompt('แก้ไขระดับชั้น:', student.grade);
         if (grade === null) return;
@@ -1940,28 +1663,38 @@ async function submitActivityForm(event) {
         if (number === null) return;
 
         if (name.trim() && grade.trim() && number.trim()) {
-            const success = await postData('updateStudent', { id, name, grade, number }, 'แก้ไขข้อมูลนักเรียนสำเร็จ');
-            if (success) {
-                await loadData(true); // Ensure data is reloaded before rendering
+            const success = await submitData('updateStudent', { id, name, grade, number }, 'แก้ไขข้อมูลนักเรียนสำเร็จ');
+            if (success && API_URL === 'DEMO_MODE') {
+                const studentIndex = studentsData.findIndex(s => s.id === id);
+                if (studentIndex !== -1) {
+                    studentsData[studentIndex] = { id, name, grade, number };
+                    updateUI();
+                }
             }
         } else {
             alert('กรุณากรอกข้อมูลให้ครบถ้วน');
         }
     }
 
+    function deleteStudentConfirm(id) {
+        if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบนักเรียนคนนี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
+            deleteStudent(id);
+        }
+    }
+
     async function deleteStudent(id) {
-        if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบนักเรียนคนนี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
-        
-        const success = await postData('deleteStudent', { id }, 'ลบนักเรียนสำเร็จ');
-        if (success) {
-            await loadData(true); // Reload data after deletion
+        const success = await submitData('deleteStudent', { id }, 'ลบนักเรียนสำเร็จ');
+        if (success && API_URL === 'DEMO_MODE') {
+            studentsData = studentsData.filter(s => s.id !== id);
+            updateUI();
         }
     }
 
     async function editTeacher(id) {
         const teacher = teachersData.find(t => t.id === id);
         if (!teacher) {
-            return alert('ไม่พบข้อมูลผู้กำกับ');
+            alert('ไม่พบข้อมูลผู้กำกับ');
+            return;
         }
 
         const name = prompt('แก้ไขชื่อ-นามสกุล:', teacher.name);
@@ -1974,85 +1707,236 @@ async function submitActivityForm(event) {
         if (phone === null) return;
 
         if (name.trim()) {
-            const success = await postData('updateTeacher', { id, name, email, phone }, 'แก้ไขข้อมูลผู้กำกับสำเร็จ');
-            if (success) {
-                await loadData(true);
+            const success = await submitData('updateTeacher', { id, name, email, phone }, 'แก้ไขข้อมูลผู้กำกับสำเร็จ');
+            if (success && API_URL === 'DEMO_MODE') {
+                const teacherIndex = teachersData.findIndex(t => t.id === id);
+                if (teacherIndex !== -1) {
+                    teachersData[teacherIndex] = { id, name, email, phone };
+                    updateUI();
+                }
             }
         } else {
             alert('กรุณากรอกชื่อ-นามสกุล');
         }
     }
 
-    async function deleteTeacher(id) {
-        if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบผู้กำกับท่านนี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
-
-        const success = await postData('deleteTeacher', { id }, 'ลบผู้กำกับสำเร็จ');
-        if (success) {
-            await loadData(true);
+    function deleteTeacherConfirm(id) {
+        if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบผู้กำกับท่านนี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
+            deleteTeacher(id);
         }
     }
 
+    async function deleteTeacher(id) {
+        const success = await submitData('deleteTeacher', { id }, 'ลบผู้กำกับสำเร็จ');
+        if (success && API_URL === 'DEMO_MODE') {
+            teachersData = teachersData.filter(t => t.id !== id);
+            updateUI();
+        }
+    }
+
+    // ========================================
+    // Activity Detail & Approval Functions
+    // ========================================
+    
+    function viewActivityDetail(activityId) {
+        const activity = activitiesData.find(a => a.id === activityId);
+        if (!activity) {
+            alert('ไม่พบกิจกรรมนี้');
+            return;
+        }
+        
+        let total = 0, present = 0, leave = 0, absent = 0, skip = 0;
+        if (activity.attendance) {
+            total = activity.attendance.length;
+            activity.attendance.forEach(r => {
+                if (r.status === 'present') present++;
+                else if (r.status === 'leave') leave++;
+                else if (r.status === 'absent') absent++;
+                else if (r.status === 'skip') skip++;
+            });
+        }
+
+        const content = `
+            <div class="info-card">
+                <h3>📝 ข้อมูลกิจกรรม</h3>
+                <div class="info-grid">
+                    <div><strong>📅 วันที่:</strong> <span>${new Date(activity.date).toLocaleDateString('th-TH')}</span></div>
+                    <div><strong>🎯 ระดับชั้น:</strong> <span>${activity.grade}</span></div>
+                    <div><strong>📍 สถานที่:</strong> <span>${activity.location}</span></div>
+                    <div><strong>👤 ผู้รับผิดชอบ:</strong> <span>${activity.responsible}</span></div>
+                    <div><strong>📝 ผู้รายงาน:</strong> <span>${activity.reporter || '-'}</span></div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <strong>📋 รายละเอียดกิจกรรม:</strong>
+                    <div class="description-box">${activity.description}</div>
+                </div>
+            </div>
+            <div class="info-card">
+                <h3>📊 สถิติการเข้าร่วม</h3>
+                <div class="attendance-stats">
+                    <div class="stat-item"><div class="number" style="color: #1e3c72;">${total}</div><div class="label">ทั้งหมด</div></div>
+                    <div class="stat-item"><div class="number" style="color: #28a745;">${present}</div><div class="label">มา</div></div>
+                    <div class="stat-item"><div class="number" style="color: #ffc107;">${leave}</div><div class="label">ลา</div></div>
+                    <div class="stat-item"><div class="number" style="color: #dc3545;">${absent}</div><div class="label">ขาด</div></div>
+                    <div class="stat-item"><div class="number" style="color: #e83e8c;">${skip}</div><div class="label">โดด</div></div>
+                </div>
+            </div>
+            <div class="info-card">
+                <h3>สถานะการดำเนินการ</h3>
+                ${renderApprovalSection(activity)}
+            </div>
+        `;
+        createModal(`activityDetail_${activity.id}`, `รายละเอียดกิจกรรม: ${activity.name}`, content);
+    }
+
+    function renderApprovalSection(activity) {
+        let checkerHtml, approverHtml;
+
+        if (!activity.checker) {
+            checkerHtml = `
+                <div class="approval-box">
+                    <h4>✅ การตรวจสอบ (นางปณิตา ปัญญานะ)</h4>
+                    <p style="color: #ffc107;"><strong>สถานะ:</strong> ⏳ รอตรวจสอบ</p>
+                    <div class="form-group" style="margin-top:10px;">
+                        <input type="password" id="checkPass_${activity.id}" placeholder="รหัสผ่าน (check123)">
+                    </div>
+                    <div class="form-group">
+                        <textarea id="checkComment_${activity.id}" placeholder="ความคิดเห็น (ถ้ามี)"></textarea>
+                    </div>
+                    <button class="btn btn-success" onclick="submitCheck('${activity.id}')">ยืนยันการตรวจสอบ</button>
+                </div>
+            `;
+        } else {
+            checkerHtml = `
+                <div class="approval-box">
+                    <h4>✅ การตรวจสอบ (นางปณิตา ปัญญานะ)</h4>
+                    <p style="color: #28a745;"><strong>สถานะ:</strong> ✔️ ตรวจแล้ว</p>
+                    <p><strong>ผู้ตรวจ:</strong> ${activity.checker}</p>
+                    <p><strong>วันที่ตรวจ:</strong> ${activity.checkerDate}</p>
+                    <p><strong>ความคิดเห็น:</strong> ${activity.checkerComment || 'ไม่มี'}</p>
+                </div>
+            `;
+        }
+
+        if (!activity.checker) {
+            approverHtml = `
+                <div class="approval-box">
+                    <h4 style="color:#6c757d;">🔖 การอนุมัติ (นางภิรญา สอนศิริ)</h4>
+                    <p><strong>สถานะ:</strong> ⏸️ รอตรวจสอบก่อน</p>
+                </div>
+            `;
+        } else if (!activity.approver) {
+            approverHtml = `
+                <div class="approval-box">
+                    <h4>🔖 การอนุมัติ (นางภิรญา สอนศิริ)</h4>
+                    <p style="color: #ffc107;"><strong>สถานะ:</strong> ⏳ รออนุมัติ</p>
+                    <div class="form-group" style="margin-top:10px;">
+                        <input type="password" id="approvePass_${activity.id}" placeholder="รหัสผ่าน (admin999)">
+                    </div>
+                    <div class="form-group">
+                        <select id="approveStatus_${activity.id}">
+                            <option value="ผ่าน">✅ ผ่าน</option>
+                            <option value="ไม่ผ่าน">❌ ไม่ผ่าน</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <textarea id="approveComment_${activity.id}" placeholder="ความคิดเห็น (ถ้ามี)"></textarea>
+                    </div>
+                    <button class="btn btn-success" onclick="submitApproval('${activity.id}')">ยืนยันการอนุมัติ</button>
+                </div>
+            `;
+        } else {
+            approverHtml = `
+                <div class="approval-box">
+                    <h4>🔖 การอนุมัติ (นางภิรญา สอนศิริ)</h4>
+                    <p style="color: ${activity.approvalStatus === 'ผ่าน' ? '#28a745' : '#dc3545'};"><strong>สถานะ:</strong> ${activity.approvalStatus === 'ผ่าน' ? '✔️ ผ่าน' : '❌ ไม่ผ่าน'}</p>
+                    <p><strong>ผู้อนุมัติ:</strong> ${activity.approver}</p>
+                    <p><strong>วันที่อนุมัติ:</strong> ${activity.approverDate}</p>
+                    <p><strong>ความคิดเห็น:</strong> ${activity.approverComment || 'ไม่มี'}</p>
+                </div>
+            `;
+        }
+
+        return `
+            <div style="display:grid; grid-template-columns: 1fr; gap: 15px;">
+                ${checkerHtml}
+                ${approverHtml}
+            </div>
+        `;
+    }
+
     async function submitCheck(activityId) {
-         const password = document.getElementById(`checkPass_${activityId}`).value;
-         if (password !== 'check123') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
-         const checkData = { activityId, checker: 'นางปณิตา ปัญญานะ', checkerDate: new Date().toLocaleString('th-TH'), checkerComment: document.getElementById(`checkComment_${activityId}`).value };
-         const success = await postData('submitCheck', checkData, 'ตรวจสอบสำเร็จ');
-         if (success) { document.getElementById(`activityDetail_${activityId}`).remove(); loadData(true); }
+        const password = document.getElementById(`checkPass_${activityId}`).value;
+        if (password !== 'check123') {
+            alert('รหัสผ่านไม่ถูกต้อง');
+            return;
+        }
+        
+        const checkData = {
+            activityId,
+            checker: 'นางปณิตา ปัญญานะ',
+            checkerDate: new Date().toLocaleString('th-TH'),
+            checkerComment: document.getElementById(`checkComment_${activityId}`).value
+        };
+
+        const success = await submitData('submitCheck', checkData, 'ตรวจสอบสำเร็จ');
+        if (success) {
+            if (API_URL === 'DEMO_MODE') {
+                const activityIndex = activitiesData.findIndex(a => a.id === activityId);
+                if (activityIndex !== -1) {
+                    Object.assign(activitiesData[activityIndex], checkData);
+                }
+            }
+            document.getElementById(`activityDetail_${activityId}`).remove();
+            updateUI();
+        }
     }
 
     async function submitApproval(activityId) {
         const password = document.getElementById(`approvePass_${activityId}`).value;
-        if (password !== 'admin999') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
-        const approvalData = { activityId, approver: 'นางภิรญา สอนศิริ', approverDate: new Date().toLocaleString('th-TH'), approvalStatus: document.getElementById(`approveStatus_${activityId}`).value, approverComment: document.getElementById(`approveComment_${activityId}`).value };
-        const success = await postData('submitApproval', approvalData, 'อนุมัติสำเร็จ');
-        if (success) { document.getElementById(`activityDetail_${activityId}`).remove(); loadData(true); }
+        if (password !== 'admin999') {
+            alert('รหัสผ่านไม่ถูกต้อง');
+            return;
+        }
+        
+        const approvalData = {
+            activityId,
+            approver: 'นางภิรญา สอนศิริ',
+            approverDate: new Date().toLocaleString('th-TH'),
+            approvalStatus: document.getElementById(`approveStatus_${activityId}`).value,
+            approverComment: document.getElementById(`approveComment_${activityId}`).value
+        };
+
+        const success = await submitData('submitApproval', approvalData, 'อนุมัติสำเร็จ');
+        if (success) {
+            if (API_URL === 'DEMO_MODE') {
+                const activityIndex = activitiesData.findIndex(a => a.id === activityId);
+                if (activityIndex !== -1) {
+                    Object.assign(activitiesData[activityIndex], approvalData);
+                }
+            }
+            document.getElementById(`activityDetail_${activityId}`).remove();
+            updateUI();
+        }
     }
 
     // ========================================
-    // Initialize App with Debug
+    // Initialize Application
     // ========================================
     
-    document.addEventListener('DOMContentLoaded', () => {
-        // แสดง debug panel ทันที
-        setTimeout(() => showDebugPanel(), 1000);
-        
-        // ลองโหลดข้อมูล cache ก่อน
-        if (loadCachedData()) {
-            console.log('✅ แสดงข้อมูล cache ก่อน');
-        }
-        
-        // จากนั้นลองโหลดข้อมูลใหม่
-        loadData().catch(() => {
-            console.log('❌ โหลดข้อมูลล้มเหลว');
-        });
-    });
-
-    // เพิ่ม keyboard shortcut สำหรับ debug
-    document.addEventListener('keydown', function(e) {
-        if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-            showDebugPanel();
-        }
-    });
-
-    // Add retry mechanism for failed requests
-    let retryCount = 0;
-    const maxRetries = 3;
-
-    async function loadDataWithRetry() {
-        for (let i = 0; i < maxRetries; i++) {
-            try {
-                await loadData(true);
-                retryCount = 0;
-                return;
-            } catch (error) {
-                retryCount++;
-                if (i === maxRetries - 1) {
-                    throw error;
-                }
-                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+    document.addEventListener('DOMContentLoaded', function() {
+        // ตรวจสอบว่ามี URL ที่บันทึกไว้หรือไม่
+        const savedUrl = localStorage.getItem('scoutSystemApiUrl');
+        if (savedUrl) {
+            if (savedUrl === 'DEMO_MODE') {
+                useDemo();
+            } else {
+                API_URL = savedUrl;
+                document.getElementById('apiUrlInput').value = savedUrl;
+                testConnection();
             }
         }
-    }
+    });
 </script>
 </body>
 </html>
