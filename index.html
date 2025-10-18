@@ -646,7 +646,11 @@
     // ========================================
     // Global Variables & Configuration
     // ========================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxwtV9xBYEmQUL9MbvAHIpKZfkvG39i3b8LhZJeHtYEvw2d-jCmmG2XF4GoAhFNnkv9qw/exec';
+    const ORIGINAL_API_URL = 'https://script.google.com/macros/s/AKfycbx5cabReA-bSMbrsvjZUE5JNeHpsh_H88yOxiBNwKavC_zYCIuS6Okb2hn4fbdZY2m3wQ/exec';
+    
+    // ใช้ CORS proxy สำหรับ GitHub Pages
+    const API_URL = `https://api.allorigins.win/raw?url=${encodeURIComponent(ORIGINAL_API_URL)}`;
+    
     let studentsData = [];
     let activitiesData = [];
     let teachersData = [];
@@ -722,62 +726,127 @@
     // Data Loading
     // ========================================
     async function loadData(forceRefresh = false) {
-        if (studentsData.length > 0 && !forceRefresh) return;
+        if (studentsData.length > 0 && !forceRefresh) return Promise.resolve();
 
-        try {
-            // Show loading indicator
-            showLoadingIndicator();
+        showLoadingIndicator();
 
-            const response = await fetch(`${API_URL}?action=getData`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                },
-                mode: 'cors',
-                cache: forceRefresh ? 'no-cache' : 'default'
-            });
+        // Try multiple methods in order
+        const methods = [
+            () => loadWithJSONP(),
+            () => loadWithProxy(),
+            () => loadWithDirectFetch()
+        ];
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (data.success === false) {
-                throw new Error(data.message || 'Server returned error');
-            }
-            
-            studentsData = data.students || [];
-            activitiesData = data.activities || [];
-            teachersData = data.teachers || [];
-            
-            console.log('Data loaded successfully:', {
-                students: studentsData.length,
-                activities: activitiesData.length,
-                teachers: teachersData.length
-            });
-            
-            // Hide loading indicator
-            hideLoadingIndicator();
-            
-            const activeTabButton = document.querySelector('.nav-tab.active');
-            const activeTabId = activeTabButton ? activeTabButton.getAttribute('onclick').match(/'([^']+)'/)[1] : 'dashboard';
-            showTab({currentTarget: activeTabButton || document.querySelector('.nav-tab')}, activeTabId);
-
-        } catch (error) {
-            console.error('Error loading data:', error);
-            hideLoadingIndicator();
-            
-            // Show user-friendly error message
-            showErrorMessage('เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาลองใหม่อีกครั้ง\n' + error.message);
-            
-            // Try to load with cached data if available
-            if (studentsData.length === 0) {
-                loadCachedData();
+        for (let i = 0; i < methods.length; i++) {
+            try {
+                console.log(`Trying loading method ${i + 1}...`);
+                await methods[i]();
+                
+                if (studentsData.length > 0 || activitiesData.length > 0 || teachersData.length > 0) {
+                    console.log('Data loaded successfully with method', i + 1);
+                    hideLoadingIndicator();
+                    saveCachedData();
+                    updateUI();
+                    return;
+                }
+            } catch (error) {
+                console.warn(`Method ${i + 1} failed:`, error);
+                continue;
             }
         }
+
+        // If all methods fail, use cached data
+        console.log('All loading methods failed, using cached data');
+        hideLoadingIndicator();
+        loadCachedData();
+        showErrorMessage('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กำลังใช้ข้อมูลที่เก็บไว้ล่าสุด');
     }
-    
+    // Method 1: JSONP (most reliable for GitHub Pages)
+    function loadWithJSONP() {
+        return new Promise((resolve, reject) => {
+            const callbackName = 'dataCallback_' + Date.now();
+            const timeoutId = setTimeout(() => {
+                delete window[callbackName];
+                reject(new Error('JSONP timeout'));
+            }, 10000);
+
+            window[callbackName] = function(data) {
+                clearTimeout(timeoutId);
+                try {
+                    if (data.success === false) {
+                        throw new Error(data.message || 'Server returned error');
+                    }
+                    
+                    studentsData = data.students || [];
+                    activitiesData = data.activities || [];
+                    teachersData = data.teachers || [];
+                    
+                    delete window[callbackName];
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                    resolve();
+                } catch (error) {
+                    delete window[callbackName];
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                    reject(error);
+                }
+            };
+
+            const script = document.createElement('script');
+            script.src = `${ORIGINAL_API_URL}?action=getData&callback=${callbackName}`;
+            script.onerror = () => {
+                clearTimeout(timeoutId);
+                delete window[callbackName];
+                reject(new Error('JSONP script load failed'));
+            };
+            
+            document.head.appendChild(script);
+        });
+    }
+
+    // Method 2: CORS Proxy
+    async function loadWithProxy() {
+        const response = await fetch(`${API_URL}?action=getData`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Proxy request failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.success === false) {
+            throw new Error(data.message || 'Server returned error');
+        }
+        
+        studentsData = data.students || [];
+        activitiesData = data.activities || [];
+        teachersData = data.teachers || [];
+    }
+
+    // Method 3: Direct Fetch (fallback)
+    async function loadWithDirectFetch() {
+        const response = await fetch(`${ORIGINAL_API_URL}?action=getData`, {
+            method: 'GET',
+            mode: 'cors',
+            headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Direct fetch failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.success === false) {
+            throw new Error(data.message || 'Server returned error');
+        }
+        
+        studentsData = data.students || [];
+        activitiesData = data.activities || [];
+        teachersData = data.teachers || [];
+    }
     // ========================================
     // View Rendering Functions
     // ========================================
@@ -1277,68 +1346,150 @@
     // Form & Action Submissions
     // ========================================
     async function postData(action, data, successMessage) {
-        try {
-            showLoadingIndicator();
+        showLoadingIndicator();
 
-            const response = await fetch(API_URL, { 
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                mode: 'cors',
-                body: JSON.stringify({ action, ...data })
-            });
+        // Try JSONP first, then iframe method
+        const methods = [
+            () => postWithJSONP(action, data),
+            () => postWithIframe(action, data)
+        ];
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            
-            if (result.success) { 
-                if(successMessage) {
-                    showSuccessMessage(successMessage);
+        for (let i = 0; i < methods.length; i++) {
+            try {
+                console.log(`Trying post method ${i + 1}...`);
+                const result = await methods[i]();
+                
+                if (result.success) {
+                    hideLoadingIndicator();
+                    if (successMessage) showSuccessMessage(successMessage);
+                    return true;
+                } else {
+                    throw new Error(result.message || 'Unknown server error');
                 }
-                hideLoadingIndicator();
-            } else { 
-                throw new Error(result.message || 'Unknown server error'); 
+            } catch (error) {
+                console.warn(`Post method ${i + 1} failed:`, error);
+                if (i === methods.length - 1) {
+                    hideLoadingIndicator();
+                    showErrorMessage('เกิดข้อผิดพลาด: ' + error.message);
+                    return false;
+                }
             }
-            return true;
-        } catch (error) {
-            console.error(`Error with action '${action}':`, error);
-            hideLoadingIndicator();
-            showErrorMessage('เกิดข้อผิดพลาด: ' + error.message);
-            return false;
         }
     }
 
-    // Loading and message functions
+    // JSONP for POST (using GET with parameters)
+    function postWithJSONP(action, data) {
+        return new Promise((resolve, reject) => {
+            const callbackName = 'postCallback_' + Date.now();
+            const timeoutId = setTimeout(() => {
+                delete window[callbackName];
+                reject(new Error('JSONP post timeout'));
+            }, 15000);
+
+            window[callbackName] = function(result) {
+                clearTimeout(timeoutId);
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+                resolve(result);
+            };
+
+            // Convert data to URL parameters
+            const params = new URLSearchParams();
+            params.append('action', action);
+            params.append('callback', callbackName);
+            
+            for (const [key, value] of Object.entries(data)) {
+                params.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
+            }
+
+            const script = document.createElement('script');
+            script.src = `${ORIGINAL_API_URL}?${params.toString()}`;
+            script.onerror = () => {
+                clearTimeout(timeoutId);
+                delete window[callbackName];
+                reject(new Error('JSONP post script load failed'));
+            };
+            
+            document.head.appendChild(script);
+        });
+    }
+    // iframe method (fallback)
+    function postWithIframe(action, data) {
+        return new Promise((resolve, reject) => {
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.name = 'hiddenFrame_' + Date.now();
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = ORIGINAL_API_URL;
+            form.target = iframe.name;
+            
+            const payload = { action, ...data };
+            for (const [key, value] of Object.entries(payload)) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = typeof value === 'object' ? JSON.stringify(value) : value;
+                form.appendChild(input);
+            }
+            
+            const timeoutId = setTimeout(() => {
+                if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                reject(new Error('iframe post timeout'));
+            }, 15000);
+
+            iframe.onload = function() {
+                clearTimeout(timeoutId);
+                try {
+                    const response = iframe.contentDocument.body.textContent;
+                    const result = JSON.parse(response);
+                    document.body.removeChild(iframe);
+                    resolve(result);
+                } catch (error) {
+                    document.body.removeChild(iframe);
+                    reject(new Error('Failed to parse iframe response'));
+                }
+            };
+            
+            iframe.onerror = function() {
+                clearTimeout(timeoutId);
+                if (document.body.contains(iframe)) document.body.removeChild(iframe);
+                reject(new Error('iframe load failed'));
+            };
+            
+            document.body.appendChild(iframe);
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        });
+    }
+    // ========================================
+    // UI Helper Functions
+    // ========================================
+    function updateUI() {
+        const activeTabButton = document.querySelector('.nav-tab.active');
+        const activeTabId = activeTabButton ? activeTabButton.getAttribute('onclick').match(/'([^']+)'/)[1] : 'dashboard';
+        showTab({currentTarget: activeTabButton || document.querySelector('.nav-tab')}, activeTabId);
+    }
+
     function showLoadingIndicator() {
-        // Remove existing indicator
         const existing = document.getElementById('loadingIndicator');
         if (existing) existing.remove();
 
         const indicator = document.createElement('div');
         indicator.id = 'loadingIndicator';
         indicator.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            color: white;
-            font-size: 18px;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: flex; align-items: center;
+            justify-content: center; z-index: 10000; color: white;
+            font-size: 18px; font-family: 'Sarabun', sans-serif;
         `;
         indicator.innerHTML = `
-            <div style="text-align: center;">
+            <div style="text-align: center; background: white; color: #1e3c72; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                 <div class="spinner"></div>
-                <div style="margin-top: 20px;">กำลังโหลดข้อมูล...</div>
+                <div style="margin-top: 20px; font-weight: 600;">กำลังเชื่อมต่อข้อมูล...</div>
+                <div style="margin-top: 10px; font-size: 14px; color: #666;">กรุณารอสักครู่</div>
             </div>
         `;
         document.body.appendChild(indicator);
@@ -1352,23 +1503,18 @@
     function showErrorMessage(message) {
         const modal = document.createElement('div');
         modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10001;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: flex; align-items: center;
+            justify-content: center; z-index: 10001; font-family: 'Sarabun', sans-serif;
         `;
         modal.innerHTML = `
-            <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; text-align: center;">
-                <h3 style="color: #dc3545; margin-bottom: 15px;">⚠️ เกิดข้อผิดพลาด</h3>
-                <p style="margin-bottom: 20px; line-height: 1.5;">${message}</p>
-                <button onclick="this.closest('div').parentElement.remove()" class="btn btn-danger">ปิด</button>
-                <button onclick="location.reload()" class="btn" style="margin-left: 10px;">รีเฟรชหน้า</button>
+            <div style="background: white; padding: 30px; border-radius: 15px; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                <h3 style="color: #dc3545; margin-bottom: 15px; font-size: 20px;">⚠️ แจ้งเตือน</h3>
+                <p style="margin-bottom: 25px; line-height: 1.6; color: #666;">${message}</p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="this.closest('div').parentElement.remove()" class="btn btn-danger">รับทราบ</button>
+                    <button onclick="location.reload()" class="btn">ลองใหม่</button>
+                </div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -1377,42 +1523,46 @@
     function showSuccessMessage(message) {
         const modal = document.createElement('div');
         modal.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #28a745;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 5px;
-            z-index: 10001;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            position: fixed; top: 20px; right: 20px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white; padding: 15px 25px; border-radius: 8px;
+            z-index: 10001; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+            font-family: 'Sarabun', sans-serif; font-weight: 600;
+            animation: slideIn 0.3s ease-out;
         `;
         modal.innerHTML = `✅ ${message}`;
         document.body.appendChild(modal);
         
         setTimeout(() => {
-            modal.remove();
+            modal.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => modal.remove(), 300);
         }, 3000);
     }
 
     function loadCachedData() {
-        // Try to load any cached data from localStorage if available
         try {
             const cached = localStorage.getItem('scoutActivityData');
             if (cached) {
                 const data = JSON.parse(cached);
-                studentsData = data.students || [];
-                activitiesData = data.activities || [];
-                teachersData = data.teachers || [];
-                console.log('Loaded cached data');
+                const cacheAge = Date.now() - (data.timestamp || 0);
+                
+                // Use cached data if less than 24 hours old
+                if (cacheAge < 86400000) {
+                    studentsData = data.students || [];
+                    activitiesData = data.activities || [];
+                    teachersData = data.teachers || [];
+                    console.log('Loaded cached data (age:', Math.round(cacheAge / 60000), 'minutes)');
+                    updateUI();
+                    return true;
+                }
             }
         } catch (e) {
-            console.log('No cached data available');
+            console.log('No valid cached data available');
         }
+        return false;
     }
 
     function saveCachedData() {
-        // Save data to localStorage for offline access
         try {
             localStorage.setItem('scoutActivityData', JSON.stringify({
                 students: studentsData,
@@ -1420,9 +1570,27 @@
                 teachers: teachersData,
                 timestamp: Date.now()
             }));
+            console.log('Data cached successfully');
         } catch (e) {
             console.log('Could not save cached data');
         }
+    }
+// ========================================
+    // Connection Status Indicator
+    // ========================================
+    function showConnectionStatus() {
+        const status = document.createElement('div');
+        status.id = 'connectionStatus';
+        status.style.cssText = `
+            position: fixed; bottom: 20px; right: 20px;
+            background: #ffc107; color: #000; padding: 8px 15px;
+            border-radius: 20px; font-size: 12px; z-index: 1000;
+            font-family: 'Sarabun', sans-serif; font-weight: 600;
+        `;
+        status.innerHTML = '🔄 ใช้ข้อมูลออฟไลน์';
+        document.body.appendChild(status);
+        
+        setTimeout(() => status.remove(), 5000);
     }
     
     
@@ -1623,8 +1791,16 @@ async function submitActivityForm(event) {
     // Initialize App
     // ========================================
     document.addEventListener('DOMContentLoaded', () => {
-        loadData().then(() => {
-            saveCachedData();
+        // Show cached data immediately for better UX
+        if (loadCachedData()) {
+            showConnectionStatus();
+        }
+        
+        // Try to load fresh data in background
+        loadData().catch(() => {
+            if (studentsData.length === 0) {
+                showErrorMessage('ไม่สามารถเชื่อมต่อได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต');
+            }
         });
     });
 
