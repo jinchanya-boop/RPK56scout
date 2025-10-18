@@ -646,7 +646,7 @@
     // ========================================
     // Global Variables & Configuration
     // ========================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzu1bgrr-8m4uVPtBhmxG8W14S_Fc-v1zyGSrfbuZpOdJE6ry3s0ppIM-3d3Gw7hFAmIg/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxcr9YGAozSiObZwA0cEqxJFrkfI3q6xJjbUegiP3ZreHen7JLbStFKTxTnIGKD_Tnd/exec';
     let studentsData = [];
     let activitiesData = [];
     let teachersData = [];
@@ -722,28 +722,60 @@
     // Data Loading
     // ========================================
     async function loadData(forceRefresh = false) {
-        if (studentsData.length > 0 && !forceRefresh) return;
+    if (studentsData.length > 0 && !forceRefresh) return;
 
-        try {
-            const response = await fetch(`${API_URL}?action=getData`);
-            if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
-            const data = await response.json();
-            
-            studentsData = data.students || [];
-            activitiesData = data.activities || [];
-            teachersData = data.teachers || [];
-            
-            console.log('Data loaded successfully.');
-            
-            const activeTabButton = document.querySelector('.nav-tab.active');
-            const activeTabId = activeTabButton ? activeTabButton.getAttribute('onclick').match(/'([^']+)'/)[1] : 'dashboard';
-            showTab({currentTarget: activeTabButton || document.querySelector('.nav-tab')}, activeTabId);
-
-        } catch (error) {
-            console.error('Error loading data:', error);
-            alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
+    try {
+        console.log('Attempting to fetch data from:', API_URL);
+        
+        const response = await fetch(`${API_URL}?action=getData`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const data = await response.json();
+        console.log('Data received:', data);
+        
+        if (data.error) {
+            throw new Error('Server error: ' + data.error);
+        }
+        
+        studentsData = data.students || [];
+        activitiesData = data.activities || [];
+        teachersData = data.teachers || [];
+        
+        console.log('Data loaded successfully:', {
+            students: studentsData.length,
+            activities: activitiesData.length,
+            teachers: teachersData.length
+        });
+        
+        const activeTabButton = document.querySelector('.nav-tab.active');
+        const activeTabId = activeTabButton ? activeTabButton.getAttribute('onclick').match(/'([^']+)'/)[1] : 'dashboard';
+        showTab({currentTarget: activeTabButton || document.querySelector('.nav-tab')}, activeTabId);
+
+    } catch (error) {
+        console.error('Error loading data:', error);
+        
+        // แสดง error message ที่เป็นมิตรกับผู้ใช้
+        const errorMessage = error.message.includes('Failed to fetch') 
+            ? 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่'
+            : `เกิดข้อผิดพลาดในการโหลดข้อมูล: ${error.message}`;
+            
+        alert(errorMessage);
+        
+        // แสดง UI สำหรับสถานะ offline
+        showOfflineState();
     }
+}
     
     // ========================================
     // View Rendering Functions
@@ -1244,19 +1276,77 @@
     // Form & Action Submissions
     // ========================================
     async function postData(action, data, successMessage) {
-        try {
-            const response = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action, ...data }) });
-            const result = await response.json();
-            if (result.success) { if(successMessage) alert(successMessage); }
-            else { throw new Error(result.message || 'Unknown error'); }
-            return true;
-        } catch (error) {
-            console.error(`Error with action '${action}':`, error);
-            alert('เกิดข้อผิดพลาด: ' + error.message);
-            return false;
+    try {
+        console.log('Sending data:', { action, ...data });
+        
+        const response = await fetch(API_URL, { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ action, ...data })
+        });
+        
+        console.log('POST Response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const result = await response.json();
+        console.log('POST Result:', result);
+        
+        if (result.success) { 
+            if(successMessage) alert(successMessage); 
+        } else { 
+            throw new Error(result.message || 'Unknown error'); 
+        }
+        return true;
+    } catch (error) {
+        console.error(`Error with action '${action}':`, error);
+        
+        const errorMessage = error.message.includes('Failed to fetch') 
+            ? 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง'
+            : `เกิดข้อผิดพลาด: ${error.message}`;
+            
+        alert(errorMessage);
+        return false;
     }
+}
+function showOfflineState() {
+    // แสดงข้อความในแต่ละ tab ว่าไม่สามารถโหลดข้อมูลได้
+    document.getElementById('activityList').innerHTML = '<p class="loading-placeholder">❌ ไม่สามารถโหลดข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่อ</p>';
+    document.getElementById('studentList').innerHTML = '<p class="loading-placeholder">❌ ไม่สามารถโหลดข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่อ</p>';
+    document.getElementById('teacherList').innerHTML = '<p class="loading-placeholder">❌ ไม่สามารถโหลดข้อมูลได้ กรุณาตรวจสอบการเชื่อมต่อ</p>';
+    document.getElementById('reportTable').innerHTML = '<tr><td colspan="9" class="loading-placeholder">❌ ไม่สามารถโหลดข้อมูลได้</td></tr>';
+    document.getElementById('checkerList').innerHTML = '<p class="loading-placeholder">❌ ไม่สามารถโหลดข้อมูลได้</p>';
+    document.getElementById('approvalList').innerHTML = '<p class="loading-placeholder">❌ ไม่สามารถโหลดข้อมูลได้</p>';
+    
+    // รีเซ็ตค่า dashboard
+    document.getElementById('totalActivities').textContent = '?';
+    document.getElementById('totalWeeks').textContent = '?';
+    document.getElementById('passedStudents').textContent = '?';
+    document.getElementById('failedStudents').textContent = '?';
+}
 
+// เพิ่มปุ่มลองใหม่
+function addRetryButton() {
+    const retryButton = document.createElement('button');
+    retryButton.className = 'btn';
+    retryButton.textContent = '🔄 ลองเชื่อมต่อใหม่';
+    retryButton.onclick = () => {
+        retryButton.disabled = true;
+        retryButton.textContent = 'กำลังเชื่อมต่อ...';
+        loadData(true).finally(() => {
+            retryButton.disabled = false;
+            retryButton.textContent = '🔄 ลองเชื่อมต่อใหม่';
+        });
+    };
+    
+    // เพิ่มปุ่มใน header
+    const headerText = document.querySelector('.header-text');
+    headerText.appendChild(retryButton);
+}
     // Helper function to convert file to Base64
 const fileToBase64 = file => new Promise((resolve, reject) => {
     if (!file) {
