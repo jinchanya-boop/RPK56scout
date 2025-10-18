@@ -725,27 +725,18 @@
         if (studentsData.length > 0 && !forceRefresh) return;
 
         try {
-            // [START] === ⭐️ โค้ดที่แก้ไข ===
-            // เปลี่ยนจาก 'GET' (ที่ส่งผ่าน URL) เป็น 'POST' (ที่ส่งผ่าน body)
-            // เพื่อให้สอดคล้องกับ Google Apps Script (doPost) ที่คาดว่าคุณใช้งานอยู่
-            // นี่คือสาเหตุที่ 'addActivity' (POST) ทำงานได้ แต่ 'loadData' (GET) เดิมทำงานไม่ได้
             const response = await fetch(API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                // [ ⭐️ ลบ headers ออกจากตรงนี้ ]
                 body: JSON.stringify({ action: 'getData' })
             });
-            // [END] === ⭐️ โค้ดที่แก้ไข ===
 
             if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
             const data = await response.json();
             
-            // [START] === ⭐️ โค้ดที่ปรับปรุง (เผื่อไว้) ===
-            // เพิ่มการตรวจสอบว่าข้อมูลกลับมาแบบมี {success: true, data: {...}} (ตามไฟล์ code.gs ที่คุณส่งมา)
-            // หรือกลับมาแบบ {...} ตรงๆ (ตามโค้ด loadData เดิม)
+            // ส่วนนี้ยังคงเดิม เพื่อรองรับข้อมูลที่ส่งกลับมา
             const responseData = data.data || data;
-            // [END] === ⭐️ โค้ดที่ปรับปรุง (เผื่อไว้) ===
             
-            // ใช้ responseData ที่ตรวจสอบแล้ว
             studentsData = responseData.students || [];
             activitiesData = responseData.activities || [];
             teachersData = responseData.teachers || [];
@@ -758,6 +749,7 @@
 
         } catch (error) {
             console.error('Error loading data:', error);
+            // นี่คือ Alert ที่คุณเห็น
             alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
         }
     }
