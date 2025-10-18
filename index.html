@@ -693,6 +693,7 @@ function loadDataWithJSONP() {
         }, 10000); // 10 seconds timeout
     });
 }
+
 // ฟังก์ชันใหม่: ลองหลายวิธี
 async function loadDataMultipleMethods() {
     const methods = [
@@ -762,6 +763,7 @@ async function loadDataMultipleMethods() {
         }
     }
 }
+
 // ฟังก์ชันสำหรับส่งข้อมูลแบบ Form submission
 function postDataWithForm(action, data) {
     return new Promise((resolve, reject) => {
@@ -1606,6 +1608,49 @@ async function testConnection() {
               'Error: ' + error.message);
     }
 }
+
+    // เพิ่มฟังก์ชันทดสอบ URL โดยตรง
+async function testDirectURL() {
+    const testUrls = [
+        'https://script.google.com/macros/s/AKfycbwUkVtZkIsZpIqlxjwS8eL_MX5OYZiIbQCtaSdp-iXOK-9EFzBabEF8OMlQ_G36Z345tA/exec?action=getData',
+        // เพิ่ม URL ใหม่ที่ได้จาก Deploy
+        // 'URL_ใหม่_ที่ได้จาก_Deploy?action=getData'
+    ];
+    
+    for (const url of testUrls) {
+        try {
+            console.log('Testing URL:', url);
+            
+            // ลอง fetch ธรรมดา
+            const response = await fetch(url);
+            if (response.ok) {
+                const text = await response.text();
+                console.log('Response text:', text.substring(0, 200) + '...');
+                
+                if (text.includes('students') || text.includes('activities')) {
+                    alert('ทดสอบ URL สำเร็จ: ' + url);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.log('URL failed:', url, error.message);
+        }
+    }
+    
+    alert('ทุก URL ทดสอบล้มเหลว - กรุณาตรวจสอบ URL และการ Deploy');
+}
+
+// เพิ่มปุ่มทดสอบ URL ใน header
+document.addEventListener('DOMContentLoaded', () => {
+    const existingTestButton = document.getElementById('testButton');
+    if (existingTestButton) {
+        existingTestButton.onclick = () => {
+            // ทดสอบทั้ง connection และ URL
+            testConnection();
+            setTimeout(() => testDirectURL(), 2000);
+        };
+    }
+});
     
 function showOfflineState() {
     // แสดงข้อความในแต่ละ tab ว่าไม่สามารถโหลดข้อมูลได้
