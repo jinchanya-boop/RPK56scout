@@ -693,7 +693,75 @@ function loadDataWithJSONP() {
         }, 10000); // 10 seconds timeout
     });
 }
-
+// ฟังก์ชันใหม่: ลองหลายวิธี
+async function loadDataMultipleMethods() {
+    const methods = [
+        // วิธีที่ 1: Fetch แบบปกติ
+        async () => {
+            const response = await fetch(`${API_URL}?action=getData`, {
+                method: 'GET',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return await response.json();
+        },
+        
+        // วิธีที่ 2: Fetch แบบ no-cors
+        async () => {
+            const response = await fetch(`${API_URL}?action=getData`, {
+                method: 'GET',
+                mode: 'no-cors'
+            });
+            // no-cors ไม่สามารถอ่าน response ได้ ต้องใช้วิธีอื่น
+            throw new Error('no-cors mode cannot read response');
+        },
+        
+        // วิธีที่ 3: JSONP
+        () => loadDataWithJSONP(),
+        
+        // วิธีที่ 4: ใช้ proxy หรือ iframe (ถ้าจำเป็น)
+        async () => {
+            // สร้าง iframe และลองเข้าถึงข้อมูล
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = `${API_URL}?action=getData`;
+            document.body.appendChild(iframe);
+            
+            return new Promise((resolve, reject) => {
+                iframe.onload = () => {
+                    try {
+                        // ลองอ่านข้อมูลจาก iframe (อาจไม่ได้ผลเพราะ CORS)
+                        const content = iframe.contentDocument.body.innerText;
+                        document.body.removeChild(iframe);
+                        resolve(JSON.parse(content));
+                    } catch (error) {
+                        document.body.removeChild(iframe);
+                        reject(error);
+                    }
+                };
+                iframe.onerror = () => {
+                    document.body.removeChild(iframe);
+                    reject(new Error('iframe load failed'));
+                };
+            });
+        }
+    ];
+    
+    for (let i = 0; i < methods.length; i++) {
+        try {
+            console.log(`Trying method ${i + 1}...`);
+            const result = await methods[i]();
+            console.log(`Method ${i + 1} successful:`, result);
+            return result;
+        } catch (error) {
+            console.log(`Method ${i + 1} failed:`, error.message);
+            if (i === methods.length - 1) {
+                throw new Error(`All methods failed. Last error: ${error.message}`);
+            }
+        }
+    }
+}
 // ฟังก์ชันสำหรับส่งข้อมูลแบบ Form submission
 function postDataWithForm(action, data) {
     return new Promise((resolve, reject) => {
@@ -821,9 +889,9 @@ function postDataWithForm(action, data) {
     try {
         console.log('Attempting to load data...');
         
-        // ลองใช้ JSONP ก่อน
-        const data = await loadDataWithJSONP();
-        console.log('Data received via JSONP:', data);
+        // ลองใช้หลายวิธี
+        const data = await loadDataMultipleMethods();
+        console.log('Data received:', data);
         
         if (data.error) {
             throw new Error('Server error: ' + data.error);
@@ -1451,49 +1519,93 @@ function hideRetryButton() {
         retryButton.remove();
     }
 }
-
+// ข้อมูลทดสอบสำหรับใช้งานชั่วคราว
+function getTestData() {
+    return {
+        students: [
+            {id: 'STU_1', name: 'นางสาวกันยารัตน์ ใจดี', grade: 'ป.1', number: '1'},
+            {id: 'STU_2', name: 'เด็กชายสมชาย รักเรียน', grade: 'ป.1', number: '2'},
+            {id: 'STU_3', name: 'เด็กหญิงสมใส ขยันขะมัก', grade: 'ป.2', number: '1'},
+            {id: 'STU_4', name: 'เด็กชายวิชาญ ปัญญาดี', grade: 'ป.2', number: '2'},
+            {id: 'STU_5', name: 'เด็กหญิงปัญญา เก่งเรียน', grade: 'ป.3/1', number: '1'},
+        ],
+        activities: [
+            {
+                id: 'ACT_1',
+                date: '2025-01-15',
+                grade: 'ป.1',
+                name: 'การผูกเงื่อน',
+                description: 'ฝึกการผูกเงื่อนพื้นฐาน',
+                location: 'สนามโรงเรียน',
+                responsible: 'นางสาวสมศรี ครูดี',
+                reporter: 'นางสาวสมศรี ครูดี',
+                attendance: [
+                    {studentId: 'STU_1', studentName: 'นางสาวกันยารัตน์ ใจดี', status: 'present'},
+                    {studentId: 'STU_2', studentName: 'เด็กชายสมชาย รักเรียน', status: 'present'}
+                ],
+                images: [],
+                checker: null,
+                approver: null
+            }
+        ],
+        teachers: [
+            {id: 'TCH_1', name: 'นางสาวสมศรี ครูดี', email: 'teacher1@school.ac.th', phone: '081-234-5678'},
+            {id: 'TCH_2', name: 'นางปณิตา ปัญญานะ', email: 'panita@school.ac.th', phone: '082-345-6789'},
+            {id: 'TCH_3', name: 'นางภิรญา สอนศิริ', email: 'pirunya@school.ac.th', phone: '083-456-7890'}
+        ]
+    };
+}
 // ========================================
 // Test Connection Function
 // ========================================
+// แก้ไขฟังก์ชัน testConnection ให้ลองใช้ข้อมูลทดสอบ
 async function testConnection() {
     try {
         console.log('Testing connection to:', API_URL);
         
-        // ทดสอบด้วย simple GET request
-        const testData = await loadDataWithJSONP();
-        console.log('Connection test successful:', testData);
-        
-        alert('✅ การเชื่อมต่อสำเร็จ!\nพบข้อมูล: ' + 
-              `นักเรียน ${(testData.students || []).length} คน, ` +
-              `กิจกรรม ${(testData.activities || []).length} รายการ, ` +
-              `ครู ${(testData.teachers || []).length} คน`);
+        // ลองดึงข้อมูลจริงก่อน
+        try {
+            const testData = await loadDataMultipleMethods();
+            console.log('Connection test successful:', testData);
+            
+            alert('✅ การเชื่อมต่อสำเร็จ!\nพบข้อมูล: ' + 
+                  `นักเรียน ${(testData.students || []).length} คน, ` +
+                  `กิจกรรม ${(testData.activities || []).length} รายการ, ` +
+                  `ครู ${(testData.teachers || []).length} คน`);
+            
+        } catch (realDataError) {
+            console.log('Real data failed, trying test data:', realDataError.message);
+            
+            // ถ้าดึงข้อมูลจริงไม่ได้ ให้ใช้ข้อมูลทดสอบ
+            const testData = getTestData();
+            
+            // โหลดข้อมูลทดสอบ
+            studentsData = testData.students;
+            activitiesData = testData.activities;
+            teachersData = testData.teachers;
+            
+            // อัปเดต UI
+            const activeTabButton = document.querySelector('.nav-tab.active');
+            const activeTabId = activeTabButton ? activeTabButton.getAttribute('onclick').match(/'([^']+)'/)[1] : 'dashboard';
+            showTab({currentTarget: activeTabButton || document.querySelector('.nav-tab')}, activeTabId);
+            
+            hideRetryButton();
+            
+            alert('⚠️ ใช้ข้อมูลทดสอบชั่วคราว\n' +
+                  'เนื่องจากไม่สามารถเชื่อมต่อกับ Google Apps Script ได้\n' +
+                  'ข้อมูลที่แสดงเป็นข้อมูลตัวอย่างเท่านั้น\n\n' +
+                  'กรุณาตรวจสอบการตั้งค่า Google Apps Script:\n' +
+                  '1. URL ถูกต้องหรือไม่\n' +
+                  '2. Deploy เป็น Web app แล้วหรือไม่\n' +
+                  '3. ตั้งค่า Execute as: Me และ Who has access: Anyone');
+        }
         
     } catch (error) {
-        console.error('Connection test failed:', error);
-        alert('❌ การเชื่อมต่อล้มเหลว!\n' + 
-              'กรุณาตรวจสอบ:\n' +
-              '1. URL ของ Google Apps Script ถูกต้องหรือไม่\n' +
-              '2. Google Apps Script ได้ Deploy เป็น Web app แล้วหรือไม่\n' +
-              '3. ตั้งค่า "Execute as: Me" และ "Who has access: Anyone"\n\n' +
+        console.error('All connection tests failed:', error);
+        alert('❌ การทดสอบล้มเหลวทั้งหมด!\n' + 
               'Error: ' + error.message);
     }
 }
-
-// เพิ่มปุ่มทดสอบการเชื่อมต่อใน header
-document.addEventListener('DOMContentLoaded', () => {
-    const testButton = document.createElement('button');
-    testButton.className = 'btn';
-    testButton.style.marginLeft = '15px';
-    testButton.style.fontSize = '14px';
-    testButton.textContent = '🔧 ทดสอบการเชื่อมต่อ';
-    testButton.onclick = testConnection;
-    
-    const headerText = document.querySelector('.header-text');
-    headerText.appendChild(testButton);
-    
-    // เริ่มโหลดข้อมูล
-    loadData();
-});
     
 function showOfflineState() {
     // แสดงข้อความในแต่ละ tab ว่าไม่สามารถโหลดข้อมูลได้
@@ -1725,9 +1837,21 @@ async function submitActivityForm(event) {
     // ========================================
     // Initialize App
     // ========================================
-    document.addEventListener('DOMContentLoaded', () => {
-        loadData();
-    });
+    // เพิ่มปุ่มทดสอบการเชื่อมต่อใน header
+document.addEventListener('DOMContentLoaded', () => {
+    const testButton = document.createElement('button');
+    testButton.className = 'btn';
+    testButton.style.marginLeft = '15px';
+    testButton.style.fontSize = '14px';
+    testButton.textContent = '🔧 ทดสอบการเชื่อมต่อ';
+    testButton.onclick = testConnection;
+    
+    const headerText = document.querySelector('.header-text');
+    headerText.appendChild(testButton);
+    
+    // เริ่มโหลดข้อมูล
+    loadData();
+});
 </script>
     
 </body>
