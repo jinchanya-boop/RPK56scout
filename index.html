@@ -1566,39 +1566,58 @@
     }
 
     // ========================================
-    // Form & Action Submissions
-    // ========================================
-    async function postData(action, data, successMessage) {
-        showLoadingIndicator();
+    // Form & Action Submissions (ปรับปรุงใหม่ด้วย Fetch)
+    // ========================================
+    async function postData(action, data, successMessage) {
+        showLoadingIndicator();
+        console.log(`🚀 Sending data action: ${action}`);
 
-        // Try JSONP first, then iframe method
-        const methods = [
-            () => postWithJSONP(action, data),
-            () => postWithIframe(action, data)
-        ];
+        try {
+            const payload = {
+                action: action,
+                ...data
+            };
 
-        for (let i = 0; i < methods.length; i++) {
-            try {
-                console.log(`Trying post method ${i + 1}...`);
-                const result = await methods[i]();
-                
-                if (result.success) {
-                    hideLoadingIndicator();
-                    if (successMessage) showSuccessMessage(successMessage);
-                    return true;
-                } else {
-                    throw new Error(result.message || 'Unknown server error');
-                }
-            } catch (error) {
-                console.warn(`Post method ${i + 1} failed:`, error);
-                if (i === methods.length - 1) {
-                    hideLoadingIndicator();
-                    showErrorMessage('เกิดข้อผิดพลาด: ' + error.message);
-                    return false;
-                }
-            }
-        }
-    }
+            // เราจะส่งข้อมูลเป็น JSON ไปที่ doPost
+            const response = await fetch(ORIGINAL_API_URL, {
+                method: 'POST',
+                mode: 'cors',
+                cache: 'no-cache',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+                redirect: 'follow' // Apps Script POST จะมีการ redirect
+            });
+
+            // เนื่องจาก Apps Script มีการ redirect เราจึงต้องอ่าน response เป็น text
+            // และเนื่องจากเราตั้งค่า CORS ใน code.gs ไว้อย่างถูกต้อง เราจะสามารถอ่าน response ได้
+            const resultText = await response.text();
+            let result;
+            
+            try {
+                result = JSON.parse(resultText);
+            } catch (jsonError) {
+                // ถ้า Apps Script พัง มันอาจจะส่ง HTML error กลับมา
+                console.error('Failed to parse JSON response:', resultText);
+                throw new Error('Server returned invalid data. Check Apps Script logs.');
+            }
+
+            if (result.success) {
+                hideLoadingIndicator();
+                if (successMessage) showSuccessMessage(successMessage);
+                return true;
+            } else {
+                throw new Error(result.message || 'Unknown server error');
+            }
+
+        } catch (error) {
+            console.error(`Post method failed:`, error);
+            hideLoadingIndicator();
+            showErrorMessage('เกิดข้อผิดพลาดในการส่งข้อมูล: ' + error.message);
+            return false;
+        }
+    }
 
     // JSONP for POST (using GET with parameters)
     function postWithJSONP(action, data) {
