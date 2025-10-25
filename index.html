@@ -2123,49 +2123,47 @@ function updateResponsibleSelection() {
     // ========================================
     // Form & Action Submissions
     // ========================================
-    async function postData(action, data, successMessage) {
+    async function postData(action, data, successMessage = '') {
     try {
-        // ✅ ใช้ JSONP สำหรับ POST ด้วย
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            const callbackName = 'jsonpCallback_' + Date.now();
-            
-            window[callbackName] = function(result) {
-                if (result.success) {
-                    if(successMessage) alert(successMessage);
-                    // ✅ Reload data หลังสำเร็จ
-                    loadData(true).then(() => {
-                        resolve(true);
-                    });
-                } else {
-                    alert('เกิดข้อผิดพลาด: ' + (result.message || 'Unknown error'));
-                    resolve(false);
-                }
-                script.remove();
-                delete window[callbackName];
-            };
-            
-            // ✅ ส่ง data เป็น query parameter
-            const params = new URLSearchParams({
-                action: action,
-                ...data,
-                callback: callbackName
-            });
-            
-            script.src = `${API_URL}?${params.toString()}`;
-            script.onerror = () => {
-                alert('เกิดข้อผิดพลาด: ไม่สามารถเชื่อมต่อ');
-                script.remove();
-                delete window[callbackName];
-                resolve(false);
-            };
-            
-            document.head.appendChild(script);
+        const url = API_URL;
+        const params = new URLSearchParams();
+        
+        params.append('action', action);
+        params.append('data', JSON.stringify(data));
+        
+        console.log('Posting to:', url);
+        console.log('Action:', action);
+        console.log('Data:', data);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            body: params,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
         });
+        
+        // ✅ ตรวจสอบ response
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        console.log('Response:', result);
+        
+        if (result.success) {
+            if (successMessage) {
+                alert(successMessage + ' - ' + (result.message || 'สำเร็จ'));
+            }
+            return result;
+        } else {
+            throw new Error(result.message || 'ไม่ทราบสาเหตุ');
+        }
     } catch (error) {
-        console.error(`Error with action '${action}':`, error);
+        console.error('Post error:', error);
         alert('เกิดข้อผิดพลาด: ' + error.message);
-        return false;
+        return null;
     }
 }
 
@@ -3005,6 +3003,12 @@ async function saveSignatureAndContinue(activityId, userType) {
     const canvas = document.getElementById('signaturePad');
     const comment = document.getElementById('signComment').value.trim();
     
+    // ✅ ตรวจสอบว่า canvas มีข้อมูล
+    if (!canvas) {
+        alert('ไม่พบแป้นวาดลายเซ็น');
+        return;
+    }
+    
     const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
     const hasSignature = imageData.data.some((pixel, index) => {
         return index % 4 !== 3 && pixel !== 255;
@@ -3015,10 +3019,16 @@ async function saveSignatureAndContinue(activityId, userType) {
         return;
     }
     
-    // ✅ เก็บ Base64 โดยตรง ไม่ต้องอัปโหลด
+    // ✅ เก็บ Base64 โดยตรง
     const signatureBase64 = canvas.toDataURL('image/png');
     const activity = activitiesData.find(a => a.id === activityId);
     
+    if (!activity) {
+        alert('ไม่พบข้อมูลกิจกรรม');
+        return;
+    }
+    
+    // ✅ เตรียมข้อมูลที่จะส่ง
     if (userType === 'checker') {
         activity.checker = 'ตรวจแล้ว';
         activity.checkerDate = new Date().toLocaleString('th-TH');
@@ -3033,13 +3043,15 @@ async function saveSignatureAndContinue(activityId, userType) {
     }
     
     const action = userType === 'checker' ? 'submitCheck' : 'submitApproval';
+    
+    // ✅ เตรียมข้อมูล - ส่ง Base64 ลายเซ็นด้วย
     const data = userType === 'checker' 
         ? {
             activityId,
             checker: activity.checker,
             checkerDate: activity.checkerDate,
             checkerComment: comment,
-            checkerSignature: signatureBase64 // ✅ ส่ง Base64
+            checkerSignature: signatureBase64  // ✅ ส่งลายเซ็น
           }
         : {
             activityId,
@@ -3047,22 +3059,38 @@ async function saveSignatureAndContinue(activityId, userType) {
             approverDate: activity.approverDate,
             approvalStatus: activity.approvalStatus,
             approverComment: comment,
-            approverSignature: signatureBase64 // ✅ ส่ง Base64
+            approverSignature: signatureBase64  // ✅ ส่งลายเซ็น
           };
     
-    postData(action, data, 'บันทึกลายเซ็นสำเร็จ').then(success => {
-        if (success) {
+    console.log('Sending data:', data);
+    
+    // ✅ ส่งไป backend
+    try {
+        const response = await postData(action, data);
+        
+        if (response && response.success) {
             // ✅ ปิด modal
             const modal = document.getElementById(`signModal_${activityId}`);
             if (modal) modal.remove();
             
-            // ✅ แสดง success message 2 วินาที แล้วปิด
+            // ✅ แสดง success message
             showSuccessMessage(userType === 'checker' ? 'ตรวจสอบและลงนาม' : 'อนุมัติและลงนาม');
             
             // ✅ โหลดข้อมูลใหม่
-            setTimeout(() => loadData(true), 1500);
+            setTimeout(() => {
+                loadData(true);
+                // รีเซ็ต currentUser เพื่อออกจากระบบโดยอัตโนมัติ
+                currentUser = null;
+                isSessionActive = false;
+            }, 1500);
+        } else {
+            alert('บันทึกไม่สำเร็จ: ' + (response?.message || 'ข้อผิดพลาดไม่ทราบ'));
+            console.error('Error response:', response);
         }
-    });
+    } catch (error) {
+        alert('เกิดข้อผิดพลาด: ' + error.message);
+        console.error('Error:', error);
+    }
 }
 
 // ✅ แสดง Success Message
@@ -3070,11 +3098,12 @@ function showSuccessMessage(action) {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-content" style="max-width: 400px; text-align: center; background: white; border-radius: 20px;">
             <div style="padding: 40px;">
                 <div style="font-size: 80px; margin-bottom: 20px;">✅</div>
                 <h2 style="color: #28a745; margin-bottom: 10px;">สำเร็จ!</h2>
-                <p style="color: #28a745; font-weight: bold; margin-top: 20px;">บันทึกลายเซ็นเสร็จสิ้น</p>
+                <p style="color: #666; margin: 15px 0;">บันทึก${action}เสร็จสิ้น</p>
+                <p style="color: #999; font-size: 12px;">ระบบจะปิด Modal ในอีก 2 วินาที...</p>
             </div>
         </div>
     `;
