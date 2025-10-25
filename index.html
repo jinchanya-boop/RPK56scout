@@ -900,18 +900,13 @@ function checkSystemStatus() {
     // ========================================
     // Data Loading
     // ========================================
-    async function loadData(refresh = true) {  // เปลี่ยน false → true
-    // เพิ่ม timestamp เพื่อให้ URL ต่างกันทุกครั้ง
-    const timestamp = new Date().getTime();
-    const urlWithTimestamp = `${API_URL}?v=${timestamp}`;
-    
+    async function loadData(forceRefresh = false) {
+    if (studentsData.length > 0 && !forceRefresh) return;
+
     try {
-        const response = await fetch(urlWithTimestamp, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'getData'
-            })
-        });
+        const response = await fetch(`${API_URL}?action=getData`);
+        if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
+        const data = await response.json();
         
         studentsData = data.students || [];
         activitiesData = data.activities || [];
@@ -3030,23 +3025,6 @@ function saveSignature(activityId, userType) {
             console.error('Error loading initial data:', error);
             alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
         }
-
-        // ========================================
-    // ✅ AUTO-REFRESH & FOCUS LISTENER
-    // ========================================
-    
-    // โหลดข้อมูลใหม่ทุก 5 นาที
-    setInterval(() => {
-        console.log('⏱️ Auto-refreshing data every 5 minutes...');
-        loadData(true);
-    }, 5 * 60 * 1000);
-    
-    // โหลดข้อมูลใหม่เมื่อเปิดหน้าเว็บ
-    window.addEventListener('focus', () => {
-        console.log('👁️ Window focused, refreshing data...');
-        loadData(true);
-    });
-}
     }
 </script>
     
