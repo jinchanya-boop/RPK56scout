@@ -2206,6 +2206,7 @@ if (success) {
         location.reload();
     }, 1500);
 }
+        
     } finally {
         submitButton.disabled = false;
         submitButton.textContent = 'บันทึกกิจกรรม';
@@ -3112,49 +3113,38 @@ function saveSignature(activityId, userType) {
     }
     
     async function initializeApp() {
-        try {
-            // ✅ โหลดข้อมูลก่อน
-            // ✅ Clear cache
-lastDataLoad = null;
+    try {
+        // ✅ โหลดข้อมูลก่อน
+        await loadData(true);
+        
+        // ✅ โหลด Dashboard เป็น tab แรก
+        loadDashboard();
 
-// ✅ Clear data
-studentsData = [];
-activitiesData = [];
-teachersData = [];
-
-// ✅ Reload หน้า
-setTimeout(() => {
-    location.reload();
-}, 1500);
-            
-            // ✅ โหลด Dashboard เป็น tab แรก
-            loadDashboard();
-
-            // ✅ ตั้งค่า nav tab ให้ active tab แรก
-            const firstTab = document.querySelector('.nav-tab');
-            if (firstTab) {
-                firstTab.classList.add('active');
-                const firstTabContent = document.querySelector('.tab-content');
-                if (firstTabContent) {
-                    firstTabContent.classList.add('active');
-                }
+        // ✅ ตั้งค่า nav tab ให้ active tab แรก
+        const firstTab = document.querySelector('.nav-tab');
+        if (firstTab) {
+            firstTab.classList.add('active');
+            const firstTabContent = document.querySelector('.tab-content');
+            if (firstTabContent) {
+                firstTabContent.classList.add('active');
             }
-            
-            // ✅ เพิ่ม event listener ให้ nav-tab ทั้งหมด
-            const navTabs = document.querySelectorAll('.nav-tab');
-            navTabs.forEach(tab => {
-                tab.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    const tabName = tab.getAttribute('data-tab');
-                    showTab(event, tabName);
-                });
-            });
-            
-        } catch (error) {
-            console.error('Error loading initial data:', error);
-            alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
         }
+        
+        // ✅ เพิ่ม event listener ให้ nav-tab ทั้งหมด
+        const navTabs = document.querySelectorAll('.nav-tab');
+        navTabs.forEach(tab => {
+            tab.addEventListener('click', (event) => {
+                event.preventDefault();
+                const tabName = tab.getAttribute('data-tab');
+                showTab(event, tabName);
+            });
+        });
+        
+    } catch (error) {
+        console.error('Error loading initial data:', error);
+        alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
     }
+}
 </script>
     
 </body>
