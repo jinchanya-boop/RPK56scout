@@ -689,7 +689,7 @@
     // ========================================
     // Global Variables & Configuration
     // ========================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbyPXGtuavtJYcEc2KOJmdCOImCJz552pdxfjDD9MUpv5Cb_azppxpZyEpIB_Jag07gbNg/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbw83ygWiQHxyNnb6kOjnG1gwtnSubyYAOULK4Myq9JLF8AT8LiOcu1iyfTtOEPvuWx71g/exec';
     let studentsData = [];
     let activitiesData = [];
     let teachersData = [
@@ -2126,15 +2126,28 @@ function updateResponsibleSelection() {
     async function postData(action, data, successMessage = '') {
     try {
         const url = API_URL;
-        const params = new URLSearchParams();
         
-        params.append('action', action);
-        params.append('data', JSON.stringify(data));
+        // ✅ ตรวจสอบ URL
+        if (!url) {
+            throw new Error('API_URL ไม่ได้ตั้งค่า');
+        }
         
-        console.log('Posting to:', url);
+        console.log('🔍 Debug Info:');
+        console.log('URL:', url);
         console.log('Action:', action);
         console.log('Data:', data);
         
+        // ✅ เตรียม parameter ให้ถูกต้อง
+        const params = new URLSearchParams();
+        params.append('action', action);
+        params.append('data', JSON.stringify(data));
+        
+        console.log('📤 Sending:', {
+            action: action,
+            data: data
+        });
+        
+        // ✅ ส่ง POST request
         const response = await fetch(url, {
             method: 'POST',
             body: params,
@@ -2143,27 +2156,35 @@ function updateResponsibleSelection() {
             }
         });
         
-        // ✅ ตรวจสอบ response
+        console.log('📊 Response Status:', response.status);
+        
+        // ✅ ตรวจสอบ HTTP response
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
+        // ✅ parse JSON
         const result = await response.json();
         
-        console.log('Response:', result);
+        console.log('✅ Response:', result);
         
+        // ✅ ตรวจสอบผลลัพธ์
         if (result.success) {
+            console.log('✅ Success:', result.message);
             if (successMessage) {
-                alert(successMessage + ' - ' + (result.message || 'สำเร็จ'));
+                alert(successMessage + '\n' + (result.message || 'สำเร็จ'));
             }
             return result;
         } else {
+            console.error('❌ Error from server:', result.message);
             throw new Error(result.message || 'ไม่ทราบสาเหตุ');
         }
+        
     } catch (error) {
-        console.error('Post error:', error);
-        alert('เกิดข้อผิดพลาด: ' + error.message);
-        return null;
+        console.error('❌ Post error:', error);
+        console.error('Stack:', error.stack);
+        alert('❌ เกิดข้อผิดพลาด:\n' + error.message);
+        return { success: false, message: error.message };
     }
 }
 
