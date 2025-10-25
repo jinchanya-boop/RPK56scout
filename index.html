@@ -2195,28 +2195,28 @@ async function submitActivityForm(event) {
         }
 
         const success = await postData('addActivity', activityData, 'บันทึกกิจกรรมสำเร็จ');
-if (success) {
-    document.getElementById('activityFormModal').remove();
-    
-    // ✅ Clear cache
-    lastDataLoad = null;
-    
-    // ✅ Clear data
-    studentsData = [];
-    activitiesData = [];
-    teachersData = [];
-    
-    // ✅ Reload หน้า
-    setTimeout(() => {
-        location.reload();
-    }, 1500);
-}
-            }
+    if (success) {  // ✅ อยู่ใน try block
+        document.getElementById('activityFormModal').remove();
         
-    } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = 'บันทึกกิจกรรม';
+        // ✅ Clear cache
+        lastDataLoad = null;
+        
+        // ✅ Clear data
+        studentsData = [];
+        activitiesData = [];
+        teachersData = [];
+        
+        // ✅ Reload หน้า
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
     }
+} catch (error) {
+    console.error('Error submitting activity:', error);
+    alert('เกิดข้อผิดพลาด: ' + error.message);
+} finally {
+    submitButton.disabled = false;
+    submitButton.textContent = 'บันทึกกิจกรรม';
 }
 
     async function submitStudentForm(event) {
