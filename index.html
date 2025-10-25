@@ -2190,10 +2190,22 @@ async function submitActivityForm(event) {
         }
 
         const success = await postData('addActivity', activityData, 'บันทึกกิจกรรมสำเร็จ');
-        if (success) {
-            document.getElementById('activityFormModal').remove();
-            await loadData(true);
-        }
+if (success) {
+    document.getElementById('activityFormModal').remove();
+    
+    // ✅ Clear cache
+    lastDataLoad = null;
+    
+    // ✅ Clear data
+    studentsData = [];
+    activitiesData = [];
+    teachersData = [];
+    
+    // ✅ Reload หน้า
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
+}
     } finally {
         submitButton.disabled = false;
         submitButton.textContent = 'บันทึกกิจกรรม';
@@ -2212,11 +2224,22 @@ async function submitActivityForm(event) {
             return;
         }
         const success = await postData('addStudent', { id: 'STU_' + Date.now(), ...studentData }, 'เพิ่มนักเรียนสำเร็จ');
-        if (success) {
-            document.getElementById('studentFormModal').remove();
-            await loadData(true);
-        }
-    }
+if (success) {
+    document.getElementById('studentFormModal').remove();
+    
+    // ✅ Clear cache
+    lastDataLoad = null;
+    
+    // ✅ Clear data
+    studentsData = [];
+    activitiesData = [];
+    teachersData = [];
+    
+    // ✅ Reload หน้า
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
+}
 
     async function submitTeacherForm(event) {
         event.preventDefault();
@@ -2230,11 +2253,22 @@ async function submitActivityForm(event) {
             return;
         }
         const success = await postData('addTeacher', { id: 'TCH_' + Date.now(), ...teacherData }, 'เพิ่มผู้กำกับสำเร็จ');
-        if (success) {
-            document.getElementById('teacherFormModal').remove();
-            await loadData(true);
-        }
-    }
+if (success) {
+    document.getElementById('teacherFormModal').remove();
+    
+    // ✅ Clear cache
+    lastDataLoad = null;
+    
+    // ✅ Clear data
+    studentsData = [];
+    activitiesData = [];
+    teachersData = [];
+    
+    // ✅ Reload หน้า
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
+}
     
     // ========================================
     // Student & Teacher Action Functions
@@ -2257,12 +2291,20 @@ async function submitActivityForm(event) {
 
         if (name.trim() && grade.trim() && number.trim()) {
             const success = await postData('updateStudent', { id, name, grade, number }, 'แก้ไขข้อมูลนักเรียนสำเร็จ');
-            if (success) {
-                await loadData(true); // Ensure data is reloaded before rendering
-            }
-        } else {
-            alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-        }
+if (success) {
+    // ✅ Clear cache
+    lastDataLoad = null;
+    
+    // ✅ Clear data
+    studentsData = [];
+    activitiesData = [];
+    teachersData = [];
+    
+    // ✅ Reload หน้า
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
+}
     }
 
     async function deleteStudent(id) {
@@ -2305,7 +2347,18 @@ async function submitActivityForm(event) {
         if (name.trim()) {
             const success = await postData('updateTeacher', { id, name, email, phone }, 'แก้ไขข้อมูลผู้กำกับสำเร็จ');
             if (success) {
-                await loadData(true);
+                // ✅ Clear cache
+lastDataLoad = null;
+
+// ✅ Clear data
+studentsData = [];
+activitiesData = [];
+teachersData = [];
+
+// ✅ Reload หน้า
+setTimeout(() => {
+    location.reload();
+}, 1500);
             }
         } else {
             alert('กรุณากรอกชื่อ-นามสกุล');
@@ -2340,7 +2393,22 @@ async function submitActivityForm(event) {
          if (password !== 'check123') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
          const checkData = { activityId, checker: 'นางปณิตา ปัญญานะ', checkerDate: new Date().toLocaleString('th-TH'), checkerComment: document.getElementById(`checkComment_${activityId}`).value };
          const success = await postData('submitCheck', checkData, 'ตรวจสอบสำเร็จ');
-         if (success) { document.getElementById(`activityDetail_${activityId}`).remove(); loadData(true); }
+         if (success) { 
+    document.getElementById(`activityDetail_${activityId}`).remove();
+    
+    // ✅ Clear cache
+    lastDataLoad = null;
+    
+    // ✅ Clear data
+    studentsData = [];
+    activitiesData = [];
+    teachersData = [];
+    
+    // ✅ Reload หน้า
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
+}
     }
 
     async function submitApproval(activityId) {
@@ -2348,7 +2416,22 @@ async function submitActivityForm(event) {
         if (password !== 'admin999') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
         const approvalData = { activityId, approver: 'นางภิรญา สอนศิริ', approverDate: new Date().toLocaleString('th-TH'), approvalStatus: document.getElementById(`approveStatus_${activityId}`).value, approverComment: document.getElementById(`approveComment_${activityId}`).value };
         const success = await postData('submitApproval', approvalData, 'อนุมัติสำเร็จ');
-        if (success) { document.getElementById(`activityDetail_${activityId}`).remove(); loadData(true); }
+        if (success) { 
+    document.getElementById(`activityDetail_${activityId}`).remove();
+    
+    // ✅ Clear cache
+    lastDataLoad = null;
+    
+    // ✅ Clear data
+    studentsData = [];
+    activitiesData = [];
+    teachersData = [];
+    
+    // ✅ Reload หน้า
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
+}
     }
 
     // ✅ เพิ่มฟังก์ชันนี้ใหม่
@@ -3031,7 +3114,18 @@ function saveSignature(activityId, userType) {
     async function initializeApp() {
         try {
             // ✅ โหลดข้อมูลก่อน
-            await loadData(true);
+            // ✅ Clear cache
+lastDataLoad = null;
+
+// ✅ Clear data
+studentsData = [];
+activitiesData = [];
+teachersData = [];
+
+// ✅ Reload หน้า
+setTimeout(() => {
+    location.reload();
+}, 1500);
             
             // ✅ โหลด Dashboard เป็น tab แรก
             loadDashboard();
