@@ -3030,6 +3030,23 @@ function saveSignature(activityId, userType) {
             console.error('Error loading initial data:', error);
             alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
         }
+
+        // ========================================
+    // ✅ AUTO-REFRESH & FOCUS LISTENER
+    // ========================================
+    
+    // โหลดข้อมูลใหม่ทุก 5 นาที
+    setInterval(() => {
+        console.log('⏱️ Auto-refreshing data every 5 minutes...');
+        loadData(true);
+    }, 5 * 60 * 1000);
+    
+    // โหลดข้อมูลใหม่เมื่อเปิดหน้าเว็บ
+    window.addEventListener('focus', () => {
+        console.log('👁️ Window focused, refreshing data...');
+        loadData(true);
+    });
+}
     }
 </script>
     
