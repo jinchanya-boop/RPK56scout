@@ -3034,13 +3034,13 @@ async function saveSignatureAndContinue(activityId, userType) {
     
     const action = userType === 'checker' ? 'submitCheck' : 'submitApproval';
     const data = userType === 'checker' 
-        ? {
-            activityId,
-            checker: activity.checker,
-            checkerDate: activity.checkerDate,
-            checkerComment: comment,
-            checkerSignature: signatureBase64 // ✅ ส่ง Base64
-          }
+    ? {
+        activityId,
+        checker: activity.checker,
+        checkerDate: activity.checkerDate,
+        checkerComment: comment,
+        checkerSignature: signatureImage  // ✅ เพิ่มบรรทัดนี้
+      }
         : {
             activityId,
             approver: activity.approver,
