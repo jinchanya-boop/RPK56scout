@@ -2125,28 +2125,43 @@ function updateResponsibleSelection() {
     // ========================================
     async function postData(action, data, successMessage) {
     try {
-        const response = await fetch(API_URL, { 
-            method: 'POST', 
-            body: JSON.stringify({ action, ...data }),
-            headers: {
-                'Content-Type': 'application/json'
-            }
+        // ✅ ใช้ JSONP สำหรับ POST ด้วย
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            const callbackName = 'jsonpCallback_' + Date.now();
+            
+            window[callbackName] = function(result) {
+                if (result.success) {
+                    if(successMessage) alert(successMessage);
+                    // ✅ Reload data หลังสำเร็จ
+                    loadData(true).then(() => {
+                        resolve(true);
+                    });
+                } else {
+                    alert('เกิดข้อผิดพลาด: ' + (result.message || 'Unknown error'));
+                    resolve(false);
+                }
+                script.remove();
+                delete window[callbackName];
+            };
+            
+            // ✅ ส่ง data เป็น query parameter
+            const params = new URLSearchParams({
+                action: action,
+                ...data,
+                callback: callbackName
+            });
+            
+            script.src = `${API_URL}?${params.toString()}`;
+            script.onerror = () => {
+                alert('เกิดข้อผิดพลาด: ไม่สามารถเชื่อมต่อ');
+                script.remove();
+                delete window[callbackName];
+                resolve(false);
+            };
+            
+            document.head.appendChild(script);
         });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success) { 
-            if(successMessage) alert(successMessage);
-            loadData(true);  // ✅ เพิ่มบรรทัดนี้
-        }
-        else { 
-            throw new Error(result.message || 'Unknown error'); 
-        }
-        return true;
     } catch (error) {
         console.error(`Error with action '${action}':`, error);
         alert('เกิดข้อผิดพลาด: ' + error.message);
