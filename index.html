@@ -2422,27 +2422,27 @@ setTimeout(() => {
     }
 
     async function submitApproval(activityId) {
-        const password = document.getElementById(`approvePass_${activityId}`).value;
-        if (password !== 'admin999') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
-        const approvalData = { activityId, approver: 'นางภิรญา สอนศิริ', approverDate: new Date().toLocaleString('th-TH'), approvalStatus: document.getElementById(`approveStatus_${activityId}`).value, approverComment: document.getElementById(`approveComment_${activityId}`).value };
-        const success = await postData('submitApproval', approvalData, 'อนุมัติสำเร็จ');
-        if (success) { 
-    document.getElementById(`activityDetail_${activityId}`).remove();
-    
-    // ✅ Clear cache
-    lastDataLoad = null;
-    
-    // ✅ Clear data
-    studentsData = [];
-    activitiesData = [];
-    teachersData = [];
-    
-    // ✅ Reload หน้า
-    setTimeout(() => {
-        location.reload();
-    }, 1500);
-}
+    const password = document.getElementById(`approvePass_${activityId}`).value;
+    if (password !== 'admin999') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
+    const approvalData = { activityId, approver: 'นางภิรญา สอนศิริ', approverDate: new Date().toLocaleString('th-TH'), approvalStatus: document.getElementById(`approveStatus_${activityId}`).value, approverComment: document.getElementById(`approveComment_${activityId}`).value };
+    const success = await postData('submitApproval', approvalData, 'อนุมัติสำเร็จ');
+    if (success) { 
+        document.getElementById(`activityDetail_${activityId}`).remove();
+        
+        // ✅ Clear cache
+        lastDataLoad = null;
+        
+        // ✅ Clear data
+        studentsData = [];
+        activitiesData = [];
+        teachersData = [];
+        
+        // ✅ Reload หน้า
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
     }
+}  // ✅ closing brace เดียวเท่านั้น
 
     // ✅ เพิ่มฟังก์ชันนี้ใหม่
     function calculateTeacherStats() {
