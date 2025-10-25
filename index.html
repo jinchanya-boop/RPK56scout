@@ -900,13 +900,18 @@ function checkSystemStatus() {
     // ========================================
     // Data Loading
     // ========================================
-    async function loadData(forceRefresh = false) {
-    if (studentsData.length > 0 && !forceRefresh) return;
-
+    async function loadData(refresh = true) {  // เปลี่ยน false → true
+    // เพิ่ม timestamp เพื่อให้ URL ต่างกันทุกครั้ง
+    const timestamp = new Date().getTime();
+    const urlWithTimestamp = `${API_URL}?v=${timestamp}`;
+    
     try {
-        const response = await fetch(`${API_URL}?action=getData`);
-        if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
-        const data = await response.json();
+        const response = await fetch(urlWithTimestamp, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'getData'
+            })
+        });
         
         studentsData = data.students || [];
         activitiesData = data.activities || [];
