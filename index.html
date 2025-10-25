@@ -2339,41 +2339,40 @@ if (success) {
     }
 }
     async function editTeacher(id) {
-        const teacher = teachersData.find(t => t.id === id);
-        if (!teacher) {
-            return alert('ไม่พบข้อมูลผู้กำกับ');
-        }
-
-        const name = prompt('แก้ไขชื่อ-นามสกุล:', teacher.name);
-        if (name === null) return;
-
-        const email = prompt('แก้ไขอีเมล:', teacher.email || '');
-        if (email === null) return;
-
-        const phone = prompt('แก้ไขเบอร์โทร:', teacher.phone || '');
-        if (phone === null) return;
-
-        if (name.trim()) {
-            const success = await postData('updateTeacher', { id, name, email, phone }, 'แก้ไขข้อมูลผู้กำกับสำเร็จ');
-            if (success) {
-                // ✅ Clear cache
-lastDataLoad = null;
-
-// ✅ Clear data
-studentsData = [];
-activitiesData = [];
-teachersData = [];
-
-// ✅ Reload หน้า
-setTimeout(() => {
-    location.reload();
-}, 1500);
-            }
-                }
-        } else {
-            alert('กรุณากรอกชื่อ-นามสกุล');
-        }
+    const teacher = teachersData.find(t => t.id === id);
+    if (!teacher) {
+        return alert('ไม่พบข้อมูลผู้กำกับ');
     }
+
+    const name = prompt('แก้ไขชื่อ-นามสกุล:', teacher.name);
+    if (name === null) return;
+
+    const email = prompt('แก้ไขอีเมล:', teacher.email || '');
+    if (email === null) return;
+
+    const phone = prompt('แก้ไขเบอร์โทร:', teacher.phone || '');
+    if (phone === null) return;
+
+    if (name.trim()) {
+        const success = await postData('updateTeacher', { id, name, email, phone }, 'แก้ไขข้อมูลผู้กำกับสำเร็จ');
+        if (success) {
+            // ✅ Clear cache
+            lastDataLoad = null;
+
+            // ✅ Clear data
+            studentsData = [];
+            activitiesData = [];
+            teachersData = [];
+
+            // ✅ Reload หน้า
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        }
+    } else {
+        alert('กรุณากรอกชื่อ-นามสกุล');
+    }
+}
 
     async function deleteTeacher(id) {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบผู้กำกับท่านนี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
