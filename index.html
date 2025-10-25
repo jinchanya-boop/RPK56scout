@@ -904,31 +904,43 @@ function checkSystemStatus() {
     if (studentsData.length > 0 && !forceRefresh) return;
 
     try {
-        // ✅ เพิ่ม timestamp เพื่อ bypass cache และบังคับให้ fetch ข้อมูลใหม่
-        const response = await fetch(`${API_URL}?action=getData&t=${new Date().getTime()}`);
-        if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
-        const data = await response.json();
-        
-        // ✅ IMPORTANT: Clear ข้อมูลเก่าก่อน
-        console.log('🧹 Clearing old data...');
-        studentsData = [];
-        activitiesData = [];
-        teachersData = [];
-        
-        // ✅ จากนั้นกำหนดข้อมูลใหม่
-        console.log('📥 Loading new data from server...');
-        studentsData = data.students || [];
-        activitiesData = data.activities || [];
-        teachersData = data.teachers || [];
-        
-        console.log('✅ Data loaded successfully.');
-        console.log('Activities count:', activitiesData.length);
-        console.log('Activities data:', activitiesData);
-        
-        const activeTabButton = document.querySelector('.nav-tab.active');
-        const activeTabId = activeTabButton ? activeTabButton.getAttribute('data-tab') : 'dashboard';
-        showTab({currentTarget: activeTabButton || document.querySelector('.nav-tab')}, activeTabId);
-
+        // ✅ ใช้ JSONP แทน fetch
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            const callbackName = 'jsonpCallback_' + Date.now();
+            
+            window[callbackName] = function(data) {
+                console.log('🧹 Clearing old data...');
+                studentsData = [];
+                activitiesData = [];
+                teachersData = [];
+                
+                console.log('📥 Loading new data from server...');
+                studentsData = data.students || [];
+                activitiesData = data.activities || [];
+                teachersData = data.teachers || [];
+                
+                console.log('✅ Data loaded successfully.');
+                console.log('Activities count:', activitiesData.length);
+                
+                const activeTabButton = document.querySelector('.nav-tab.active');
+                const activeTabId = activeTabButton ? activeTabButton.getAttribute('data-tab') : 'dashboard';
+                showTab({currentTarget: activeTabButton || document.querySelector('.nav-tab')}, activeTabId);
+                
+                resolve();
+                script.remove();
+                delete window[callbackName];
+            };
+            
+            script.src = `${API_URL}?action=getData&callback=${callbackName}&t=${new Date().getTime()}`;
+            script.onerror = () => {
+                reject(new Error('Failed to load data'));
+                script.remove();
+                delete window[callbackName];
+            };
+            
+            document.head.appendChild(script);
+        });
     } catch (error) {
         console.error('Error loading data:', error);
         alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
@@ -2112,20 +2124,37 @@ function updateResponsibleSelection() {
     // Form & Action Submissions
     // ========================================
     async function postData(action, data, successMessage) {
-        try {
-            const response = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action, ...data }) });
-            const result = await response.json();
-            if (result.success) { if(successMessage) alert(successMessage); }
-            else { throw new Error(result.message || 'Unknown error'); }
-            return true;
-        } catch (error) {
-            console.error(`Error with action '${action}':`, error);
-            alert('เกิดข้อผิดพลาด: ' + error.message);
-            return false;
+    try {
+        const response = await fetch(API_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action, ...data }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const result = await response.json();
+        
+        if (result.success) { 
+            if(successMessage) alert(successMessage);
+            loadData(true);  // ✅ เพิ่มบรรทัดนี้
+        }
+        else { 
+            throw new Error(result.message || 'Unknown error'); 
+        }
+        return true;
+    } catch (error) {
+        console.error(`Error with action '${action}':`, error);
+        alert('เกิดข้อผิดพลาด: ' + error.message);
+        return false;
     }
+}
 
-    // Helper function to convert file to Base64
+// Helper function to convert file to Base64
 const fileToBase64 = file => new Promise((resolve, reject) => {
     if (!file) {
         resolve(null);
@@ -2137,6 +2166,43 @@ const fileToBase64 = file => new Promise((resolve, reject) => {
     reader.onerror = error => reject(error);
 });
 
+async function postDataViaScript(action, data, successMessage) {
+    try {
+        const script = document.createElement('script');
+        const callbackName = 'jsonpCallback_' + Date.now();
+        
+        window[callbackName] = function(result) {
+            if (result.success) {
+                if(successMessage) alert(successMessage);
+                loadData(true);
+            } else {
+                alert('เกิดข้อผิดพลาด: ' + (result.message || 'Unknown error'));
+            }
+            script.remove();
+            delete window[callbackName];
+        };
+        
+        const params = new URLSearchParams({
+            action: action,
+            ...data,
+            callback: callbackName
+        });
+        
+        script.src = `${API_URL}?${params.toString()}`;
+        script.onerror = () => {
+            alert('เกิดข้อผิดพลาด: ' + action);
+            script.remove();
+            delete window[callbackName];
+        };
+        
+        document.head.appendChild(script);
+        return true;
+    } catch (error) {
+        console.error('Error:', error);
+        alert('เกิดข้อผิดพลาด: ' + error.message);
+        return false;
+    }
+}
 async function submitActivityForm(event) {
     event.preventDefault();
     const form = event.target;
