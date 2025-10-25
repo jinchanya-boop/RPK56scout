@@ -908,13 +908,21 @@ function checkSystemStatus() {
         if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
         const data = await response.json();
         
+        // ✅ IMPORTANT: Clear ข้อมูลเก่าก่อน !!!
+        console.log('🧹 Clearing old data...');
+        studentsData = [];
+        activitiesData = [];
+        teachersData = [];
+        
+        // ✅ จากนั้นกำหนดข้อมูลใหม่
+        console.log('📥 Loading new data from server...');
         studentsData = data.students || [];
         activitiesData = data.activities || [];
         teachersData = data.teachers || [];
         
-        console.log('Data loaded successfully.');
+        console.log('✅ Data loaded successfully.');
         console.log('Activities count:', activitiesData.length);
-        console.log('Activities data:', activitiesData); // ดีบัก
+        console.log('Activities data:', activitiesData);
         
         const activeTabButton = document.querySelector('.nav-tab.active');
         const activeTabId = activeTabButton ? activeTabButton.getAttribute('data-tab') : 'dashboard';
