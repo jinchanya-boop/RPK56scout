@@ -2246,8 +2246,8 @@ if (success) {
     setTimeout(() => {
         location.reload();
     }, 1500);
+    }
 }
-            }
 
     async function submitTeacherForm(event) {
         event.preventDefault();
@@ -2276,45 +2276,46 @@ if (success) {
     setTimeout(() => {
         location.reload();
     }, 1500);
+    }
 }
-            }
     
     // ========================================
     // Student & Teacher Action Functions
     // ========================================
 
     async function editStudent(id) {
-        const student = studentsData.find(s => s.id === id);
-        if (!student) {
-            return alert('ไม่พบข้อมูลนักเรียน');
-        }
-
-        const name = prompt('แก้ไขชื่อ-นามสกุล:', student.name);
-        if (name === null) return; // User clicked cancel
-
-        const grade = prompt('แก้ไขระดับชั้น:', student.grade);
-        if (grade === null) return;
-
-        const number = prompt('แก้ไขเลขที่:', student.number);
-        if (number === null) return;
-
-        if (name.trim() && grade.trim() && number.trim()) {
-            const success = await postData('updateStudent', { id, name, grade, number }, 'แก้ไขข้อมูลนักเรียนสำเร็จ');
-if (success) {
-    // ✅ Clear cache
-    lastDataLoad = null;
-    
-    // ✅ Clear data
-    studentsData = [];
-    activitiesData = [];
-    teachersData = [];
-    
-    // ✅ Reload หน้า
-    setTimeout(() => {
-        location.reload();
-    }, 1500);
-}
+    const student = studentsData.find(s => s.id === id);
+    if (!student) {
+        return alert('ไม่พบข้อมูลนักเรียน');
     }
+
+    const name = prompt('แก้ไขชื่อ-นามสกุล:', student.name);
+    if (name === null) return;
+
+    const grade = prompt('แก้ไขระดับชั้น:', student.grade);
+    if (grade === null) return;
+
+    const number = prompt('แก้ไขเลขที่:', student.number);
+    if (number === null) return;
+
+    if (name.trim() && grade.trim() && number.trim()) {
+        const success = await postData('updateStudent', { id, name, grade, number }, 'แก้ไขข้อมูลนักเรียนสำเร็จ');
+        if (success) {
+            // ✅ Clear cache
+            lastDataLoad = null;
+            
+            // ✅ Clear data
+            studentsData = [];
+            activitiesData = [];
+            teachersData = [];
+            
+            // ✅ Reload หน้า
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        }
+    }
+}
 
     async function deleteStudent(id) {
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบนักเรียนคนนี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) return;
