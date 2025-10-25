@@ -904,7 +904,8 @@ function checkSystemStatus() {
     if (studentsData.length > 0 && !forceRefresh) return;
 
     try {
-        const response = await fetch(`${API_URL}?action=getData`);
+        // ✅ เพิ่ม timestamp เพื่อ bypass cache และบังคับให้ fetch ข้อมูลใหม่
+        const response = await fetch(`${API_URL}?action=getData&t=${new Date().getTime()}`);
         if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
         const data = await response.json();
         
@@ -938,6 +939,10 @@ function checkSystemStatus() {
     // View Rendering Functions
     // ========================================
     function loadDashboard() {
+    // ✅ กรอง activities ที่ว่างออก
+    const validActivities = activitiesData.filter(activity => 
+        activity && activity.id && activity.name && activity.date
+    );
     document.getElementById('totalActivities').textContent = activitiesData.length;
     const uniqueWeeks = new Set(activitiesData.map(a => {
         const date = new Date(a.date);
