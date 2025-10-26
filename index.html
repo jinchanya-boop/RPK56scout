@@ -1872,7 +1872,7 @@ function showSignatureModal(activity, userType) {
                 </div>
                 <div class="sig-box">
                     <div style="text-align: left; font-size: 11px; line-height: 1.25; margin: 0;">
-                        ${activity.checkerSignature ? // <-- ลบ .startsWith(...) ตรงนี้
+                        ${activity.checkerSignature ?
                             `<img src="${activity.checkerSignature}" style="max-width: 75px; max-height: 30px; margin-bottom: 1px; border: 1px solid #ddd; display: block;">` :
                             '<div class="line"></div>'
                         }
@@ -1882,7 +1882,7 @@ function showSignatureModal(activity, userType) {
                 </div>
                 <div class="sig-box">
                     <div style="text-align: left; font-size: 11px; line-height: 1.25; margin: 0;">
-                        ${activity.approverSignature ? // <-- ลบ .startsWith(...) ตรงนี้
+                        ${activity.approverSignature ?
                             `<img src="${activity.approverSignature}" style="max-width: 75px; max-height: 30px; margin-bottom: 1px; border: 1px solid #ddd; display: block;">` :
                             '<div class="line"></div>'
                         }
@@ -3121,32 +3121,33 @@ async function saveSignatureAndContinue(activityId, userType) {
     console.log('Sending data:', data);
     
     // ✅ ส่งไป backend
-    try {
-        const response = await postData(action, data);
-        
-        if (response && response.success) {
-            // ✅ ปิด modal
-            const modal = document.getElementById(`signModal_${activityId}`);
-            if (modal) modal.remove();
-            
-            // ✅ แสดง success message
-            showSuccessMessage(userType === 'checker' ? 'ตรวจสอบและลงนาม' : 'อนุมัติและลงนาม');
-            
-            // ✅ โหลดข้อมูลใหม่
-            setTimeout(() => {
-                loadData(true);
-                // รีเซ็ต currentUser เพื่อออกจากระบบโดยอัตโนมัติ (ลบ 2 บรรทัดล่างนี้ออก)
-                // currentUser = null;
-                // isSessionActive = false;
-            }, 1500);
-        } else {
-            alert('บันทึกไม่สำเร็จ: ' + (response?.message || 'ข้อผิดพลาดไม่ทราบ'));
-            console.error('Error response:', response);
-        }
-    } catch (error) {
-        alert('เกิดข้อผิดพลาด: ' + error.message);
-        console.error('Error:', error);
-    }
+    try {
+        const response = await postData(action, data);
+        
+        if (response && response.success) {
+            // ✅ ปิด modal
+            const modal = document.getElementById(`signModal_${activityId}`);
+            if (modal) modal.remove();
+            
+            // ✅ แสดง success message
+            showSuccessMessage(userType === 'checker' ? 'ตรวจสอบและลงนาม' : 'อนุมัติและลงนาม');
+            
+            // ✅ โหลดข้อมูลใหม่
+            setTimeout(() => {
+                loadData(true);
+                // รีเซ็ต currentUser เพื่อออกจากระบบโดยอัตโนมัติ
+                currentUser = null;
+                isSessionActive = false;
+            }, 1500);
+        } else {
+            alert('บันทึกไม่สำเร็จ: ' + (response?.message || 'ข้อผิดพลาดไม่ทราบ'));
+            console.error('Error response:', response);
+        }
+    } catch (error) {
+        alert('เกิดข้อผิดพลาด: ' + error.message);
+        console.error('Error:', error);
+    }
+}
 
 // ✅ แสดง Success Message
 function showSuccessMessage(action) {
@@ -3264,12 +3265,12 @@ function saveSignature(activityId, userType) {
           };
     
     postData(action, data, 'ลายเซ็นบันทึกสำเร็จ').then(success => {
-        if (success) {
-            document.getElementById(`signModal_${activityId}`).remove();
-            // currentUser = null;  <-- ลบบรรทัดนี้ออก
-            loadData(true);
-        }
-    });
+        if (success) {
+            document.getElementById(`signModal_${activityId}`).remove();
+            currentUser = null;
+            loadData(true);
+        }
+    });
 }
 
 
