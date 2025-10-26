@@ -3134,11 +3134,11 @@ async function saveSignatureAndContinue(activityId, userType) {
             
             // ✅ โหลดข้อมูลใหม่
             setTimeout(() => {
-                loadData(true);
-                // รีเซ็ต currentUser เพื่อออกจากระบบโดยอัตโนมัติ
-                currentUser = null;
-                isSessionActive = false;
-            }, 1500);
+                loadData(true);
+                // รีเซ็ต currentUser เพื่อออกจากระบบโดยอัตโนมัติ (ลบ 2 บรรทัดล่างนี้ออก)
+                // currentUser = null;
+                // isSessionActive = false;
+            }, 1500);
         } else {
             alert('บันทึกไม่สำเร็จ: ' + (response?.message || 'ข้อผิดพลาดไม่ทราบ'));
             console.error('Error response:', response);
@@ -3265,12 +3265,12 @@ function saveSignature(activityId, userType) {
           };
     
     postData(action, data, 'ลายเซ็นบันทึกสำเร็จ').then(success => {
-        if (success) {
-            document.getElementById(`signModal_${activityId}`).remove();
-            currentUser = null;
-            loadData(true);
-        }
-    });
+        if (success) {
+            document.getElementById(`signModal_${activityId}`).remove();
+            // currentUser = null;  <-- ลบบรรทัดนี้ออก
+            loadData(true);
+        }
+    });
 }
 
 
