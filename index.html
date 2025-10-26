@@ -3131,14 +3131,38 @@ async function saveSignatureAndContinue(activityId, userType) {
             
             // ✅ แสดง success message
             showSuccessMessage(userType === 'checker' ? 'ตรวจสอบและลงนาม' : 'อนุมัติและลงนาม');
-            
-            // ✅ โหลดข้อมูลใหม่
+
+            // --- START: โค้ดที่แก้ไข ---
+            // อัปเดตข้อมูลใน activitiesData ทันที
+            const activityIndex = activitiesData.findIndex(a => a.id === activityId);
+            if (activityIndex !== -1) {
+                if (userType === 'checker') {
+                    activitiesData[activityIndex].checker = data.checker;
+                    activitiesData[activityIndex].checkerDate = data.checkerDate;
+                    activitiesData[activityIndex].checkerComment = data.checkerComment;
+                    activitiesData[activityIndex].checkerSignature = response.signatureUrl || data.checkerSignature; // ใช้ URL จาก response ถ้ามี
+                } else {
+                    activitiesData[activityIndex].approver = data.approver;
+                    activitiesData[activityIndex].approverDate = data.approverDate;
+                    activitiesData[activityIndex].approvalStatus = data.approvalStatus;
+                    activitiesData[activityIndex].approverComment = data.approverComment;
+                    activitiesData[activityIndex].approverSignature = response.signatureUrl || data.approverSignature; // ใช้ URL จาก response ถ้ามี
+                }
+            }
+
+            // รีเฟรชรายการที่หน้าจอทันที
+            if (userType === 'checker') {
+                displayPendingChecks();
+            } else {
+                displayPendingApprovals();
+            }
+            // --- END: โค้ดที่แก้ไข ---
+
+            /* ลบ setTimeout และ loadData(true) เดิมออก
             setTimeout(() => {
                 loadData(true);
-                // รีเซ็ต currentUser เพื่อออกจากระบบโดยอัตโนมัติ (ลบ 2 บรรทัดล่างนี้ออก)
-                // currentUser = null;
-                // isSessionActive = false;
             }, 1500);
+            */
         } else {
             alert('บันทึกไม่สำเร็จ: ' + (response?.message || 'ข้อผิดพลาดไม่ทราบ'));
             console.error('Error response:', response);
