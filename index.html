@@ -904,7 +904,6 @@ function checkSystemStatus() {
     if (studentsData.length > 0 && !forceRefresh) return;
 
     try {
-        // ✅ ใช้ JSONP แทน fetch
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             const callbackName = 'jsonpCallback_' + Date.now();
@@ -917,8 +916,48 @@ function checkSystemStatus() {
                 
                 console.log('📥 Loading new data from server...');
                 studentsData = data.students || [];
-                activitiesData = data.activities || [];
                 teachersData = data.teachers || [];
+                
+                // ✅ แก้ไขส่วนนี้ - Parse JSON สำหรับ attendance และ images
+                const rawActivities = data.activities || [];
+                activitiesData = rawActivities.map(activity => {
+                    // Parse attendance ถ้าเป็น string
+                    let attendance = [];
+                    if (activity.attendance) {
+                        if (typeof activity.attendance === 'string') {
+                            try {
+                                attendance = JSON.parse(activity.attendance);
+                            } catch (e) {
+                                console.error('Failed to parse attendance for', activity.id, e);
+                                attendance = [];
+                            }
+                        } else if (Array.isArray(activity.attendance)) {
+                            attendance = activity.attendance;
+                        }
+                    }
+                    
+                    // Parse images ถ้าเป็น string
+                    let images = [];
+                    if (activity.images) {
+                        if (typeof activity.images === 'string') {
+                            try {
+                                images = JSON.parse(activity.images);
+                            } catch (e) {
+                                console.error('Failed to parse images for', activity.id, e);
+                                images = [];
+                            }
+                        } else if (Array.isArray(activity.images)) {
+                            images = activity.images;
+                        }
+                    }
+                    
+                    // Return activity พร้อมข้อมูลที่ parse แล้ว
+                    return {
+                        ...activity,
+                        attendance: attendance,
+                        images: images
+                    };
+                });
                 
                 console.log('✅ Data loaded successfully.');
                 console.log('Activities count:', activitiesData.length);
