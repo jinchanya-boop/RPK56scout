@@ -2137,23 +2137,21 @@ function updateResponsibleSelection() {
         console.log('Action:', action);
         console.log('Data:', data);
         
-        // ✅ เตรียม parameter ให้ถูกต้อง
-        const params = new URLSearchParams();
-        params.append('action', action);
-        params.append('data', JSON.stringify(data));
-        
-        console.log('📤 Sending:', {
+        // ✅ FIX: เตรียมข้อมูลให้ถูกต้อง - ใส่ action เข้าไปใน data object
+        const payload = {
             action: action,
-            data: data
-        });
+            ...data
+        };
         
-        // ✅ ส่ง POST request
+        console.log('📤 Sending:', payload);
+        
+        // ✅ FIX: ส่งแบบ JSON ตรงๆ แทน URLSearchParams
         const response = await fetch(url, {
             method: 'POST',
-            body: params,
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
+                'Content-Type': 'text/plain;charset=utf-8'
+            },
+            body: JSON.stringify(payload)
         });
         
         console.log('📊 Response Status:', response.status);
