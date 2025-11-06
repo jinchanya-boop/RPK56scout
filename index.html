@@ -988,6 +988,9 @@ function checkSystemStatus() {
     // View Rendering Functions
     // ========================================
     function loadDashboard() {
+    // 🔧 ทำลาย charts เก่าก่อน
+    destroyAllCharts();
+    
     // ✅ กรอง activities ที่ว่างออก
     const validActivities = activitiesData.filter(activity => 
         activity && activity.id && activity.name && activity.date
@@ -1128,6 +1131,14 @@ function updateSubmissionStats() {
 }
 
 function createSubmissionCharts() {
+    // 🔧 ทำลาย chart เก่าก่อนสร้างใหม่
+    if (window.statusChartInstance) {
+        window.statusChartInstance.destroy();
+    }
+    if (window.progressChartInstance) {
+        window.progressChartInstance.destroy();
+    }
+    
     const stats = {
         pending: activitiesData.filter(a => !a.checker).length,
         checked: activitiesData.filter(a => a.checker && !a.approver).length,
@@ -1135,9 +1146,10 @@ function createSubmissionCharts() {
     };
     
     // Doughnut Chart
+    // Doughnut Chart
     const ctx1 = document.getElementById('statusChart');
     if (ctx1) {
-        new Chart(ctx1, {
+        window.statusChartInstance = new Chart(ctx1, {
             type: 'doughnut',
             data: {
                 labels: ['รอตรวจสอบ', 'ผ่านตรวจสอบ', 'อนุมัติแล้ว'],
@@ -1157,9 +1169,10 @@ function createSubmissionCharts() {
     }
     
     // Bar Chart
+    // Bar Chart
     const ctx2 = document.getElementById('progressChart');
     if (ctx2) {
-        new Chart(ctx2, {
+        window.progressChartInstance = new Chart(ctx2, {
             type: 'bar',
             data: {
                 labels: ['รอตรวจ', 'ตรวจแล้ว', 'อนุมัติแล้ว'],
@@ -2649,6 +2662,12 @@ function debugTeacherData() {
 
     // ✅ เพิ่มฟังก์ชันนี้ใหม่
     function loadTeacherReport() {
+    // 🔧 ทำลาย teacher charts เก่า
+    if (window.teacherBarChartInstance) {
+        window.teacherBarChartInstance.destroy();
+        window.teacherBarChartInstance = null;
+    }
+    
     // ตรวจสอบว่า activitiesData ถูกโหลดแล้ว
     if (!activitiesData || activitiesData.length === 0) {
         document.getElementById('teacherStatsTable').innerHTML = 
@@ -2689,6 +2708,26 @@ function debugTeacherData() {
     console.log('Teacher Report loaded successfully');
 }
 
+    // ✅ เพิ่มฟังก์ชันนี้ใหม่
+function destroyAllCharts() {
+    // Destroy dashboard charts
+    if (window.statusChartInstance) {
+        window.statusChartInstance.destroy();
+        window.statusChartInstance = null;
+    }
+    if (window.progressChartInstance) {
+        window.progressChartInstance.destroy();
+        window.progressChartInstance = null;
+    }
+    
+    // Destroy teacher report chart
+    if (window.teacherBarChartInstance) {
+        window.teacherBarChartInstance.destroy();
+        window.teacherBarChartInstance = null;
+    }
+    
+    console.log('✅ All charts destroyed');
+}
     // ✅ เพิ่มฟังก์ชันนี้ใหม่
     function updateTeacherTable(teacherStats) {
         const tbody = document.getElementById('teacherStatsTable');
@@ -2826,8 +2865,11 @@ function debugTeacherData() {
             container.appendChild(chartDiv);
 
             // วาด Pie Chart
+            // วาด Pie Chart
             const ctx = document.getElementById(canvasId).getContext('2d');
-            new Chart(ctx, {
+            
+            // 🔧 เก็บ instance ไว้เพื่อทำลายในครั้งต่อไป
+            const chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['ส่งแล้ว', 'รอตรวจ', 'ตรวจแล้ว', 'อนุมัติแล้ว'],
