@@ -1740,11 +1740,6 @@ function showSignatureModal(activity, userType) {
     const activity = activitiesData.find(a => a.id === activityId);
     if (!activity) { return alert('ไม่พบข้อมูลกิจกรรม'); }
 
-    // 🔍 ดีบัก: ตรวจสอบว่ามีลายเซ็นหรือไม่
-    console.log('📝 Activity Data:', activity);
-    console.log('✍️ Checker Signature:', activity.checkerSignature ? 'มี' : 'ไม่มี');
-    console.log('✍️ Approver Signature:', activity.approverSignature ? 'มี' : 'ไม่มี');
-
     let total = 0, present = 0, absent = 0, leave = 0, skip = 0;
     if (activity.attendance) {
         activity.attendance.forEach(r => {
@@ -1831,15 +1826,14 @@ function showSignatureModal(activity, userType) {
                 display: flex; 
                 flex-direction: column; 
                 justify-content: flex-end; 
-                height: 2.2cm;
+                height: 1.8cm;
                 font-size: 11px;
-                text-align: center;
             }
             .sig-box img {
-                max-width: 100px;
-                max-height: 40px;
-                margin: 0 auto 5px auto;
-                object-fit: contain;
+                max-width: 75px;
+                max-height: 30px;
+                margin-bottom: 1px;
+                border: 1px solid #ddd;
             }
             .line { 
                 border-bottom: 1px solid #000; 
@@ -2606,6 +2600,7 @@ if (success) {
     function calculateTeacherStats() {
     const statsMap = {};
 
+    // ตรวจสอบว่ามีข้อมูลจริง
     if (!activitiesData || activitiesData.length === 0) {
         console.warn('activitiesData is empty');
         return [];
@@ -2614,66 +2609,49 @@ if (success) {
     console.log('Calculating teacher stats from', activitiesData.length, 'activities');
 
     activitiesData.forEach(activity => {
-        // ✅ ใช้ responsible แทน reporter
-        let reporters = [];
+        // ✅ ใช้ reporter ที่บันทึกไว้ (ชื่อผู้กำกับ)
+        let reporter = activity.reporter || 'ไม่ระบุ';
         
-        if (activity.responsible) {
-            // ถ้าเป็น array แล้ว
-            if (Array.isArray(activity.responsible)) {
-                reporters = activity.responsible;
-            } 
-            // ถ้าเป็น string ที่มี comma
-            else if (typeof activity.responsible === 'string') {
-                if (activity.responsible.includes(',')) {
-                    reporters = activity.responsible.split(',').map(r => r.trim());
-                } else {
-                    reporters = [activity.responsible.trim()];
-                }
-            }
+        // ล้างเว้นวรรค
+        reporter = reporter.trim();
+        
+        // ตรวจสอบว่าชื่อนี้มีในระบบหรือไม่
+        const teacherExists = teachersData.find(t => 
+            t.name.trim().toLowerCase() === reporter.toLowerCase()
+        );
+        
+        if (!teacherExists && reporter !== 'ไม่ระบุ') {
+            console.warn('Teacher not found:', reporter);
         }
-        
-        // ✅ นับสถิติสำหรับแต่ละคน
-        reporters.forEach(reporter => {
-            if (!reporter || reporter === 'ไม่ระบุ') return;
-            
-            // ตรวจสอบว่ามีชื่อนี้ในระบบหรือไม่
-            const teacherExists = teachersData.find(t => 
-                t.name.trim().toLowerCase() === reporter.toLowerCase()
-            );
-            
-            if (!teacherExists) {
-                console.warn('⚠️ Teacher not found:', reporter);
-                // แสดงลิงก์แทน (ถ้าเป็น URL)
-                if (reporter.startsWith('http')) {
-                    console.log('📎 Found URL instead of name:', reporter);
-                    return; // ข้ามไป
-                }
-            }
 
-            if (!statsMap[reporter]) {
-                statsMap[reporter] = {
-                    name: reporter,
-                    submitted: 0,
-                    pending: 0,
-                    checked: 0,
-                    approved: 0
-                };
-            }
+        if (!statsMap[reporter]) {
+            statsMap[reporter] = {
+                name: reporter,
+                submitted: 0,
+                pending: 0,      // รอตรวจสอบ
+                checked: 0,       // ผ่านตรวจสอบแล้ว
+                approved: 0       // อนุมัติแล้ว
+            };
+        }
 
-            statsMap[reporter].submitted += 1;
+        // นับจำนวนรายงาน
+        statsMap[reporter].submitted += 1;
 
-            if (!activity.checker) {
-                statsMap[reporter].pending += 1;
-            } else if (activity.checker && !activity.approver) {
-                statsMap[reporter].checked += 1;
-            } else if (activity.approver) {
-                statsMap[reporter].approved += 1;
-            }
-        });
+        // ตรวจสอบสถานะ
+        if (!activity.checker) {
+            // ยังไม่ได้ตรวจสอบ
+            statsMap[reporter].pending += 1;
+        } else if (activity.checker && !activity.approver) {
+            // ตรวจแล้ว แต่ยังไม่อนุมัติ
+            statsMap[reporter].checked += 1;
+        } else if (activity.approver) {
+            // อนุมัติแล้ว
+            statsMap[reporter].approved += 1;
+        }
     });
 
     const result = Object.values(statsMap).sort((a, b) => b.submitted - a.submitted);
-    console.log('✅ Teacher Stats Result:', result);
+    console.log('Teacher Stats Result:', result);
     return result;
 }
 
