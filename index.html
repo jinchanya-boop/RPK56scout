@@ -1740,6 +1740,11 @@ function showSignatureModal(activity, userType) {
     const activity = activitiesData.find(a => a.id === activityId);
     if (!activity) { return alert('ไม่พบข้อมูลกิจกรรม'); }
 
+    // 🔍 ดีบัก: ตรวจสอบว่ามีลายเซ็นหรือไม่
+    console.log('📝 Activity Data:', activity);
+    console.log('✍️ Checker Signature:', activity.checkerSignature ? 'มี' : 'ไม่มี');
+    console.log('✍️ Approver Signature:', activity.approverSignature ? 'มี' : 'ไม่มี');
+
     let total = 0, present = 0, absent = 0, leave = 0, skip = 0;
     if (activity.attendance) {
         activity.attendance.forEach(r => {
@@ -1826,14 +1831,15 @@ function showSignatureModal(activity, userType) {
                 display: flex; 
                 flex-direction: column; 
                 justify-content: flex-end; 
-                height: 1.8cm;
+                height: 2.2cm;
                 font-size: 11px;
+                text-align: center;
             }
             .sig-box img {
-                max-width: 75px;
-                max-height: 30px;
-                margin-bottom: 1px;
-                border: 1px solid #ddd;
+                max-width: 100px;
+                max-height: 40px;
+                margin: 0 auto 5px auto;
+                object-fit: contain;
             }
             .line { 
                 border-bottom: 1px solid #000; 
