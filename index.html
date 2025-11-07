@@ -1883,30 +1883,30 @@ function showSignatureModal(activity, userType) {
                         <div class="sig-title">ผู้รายงาน</div>
                     </div>
                 </div>
+<div class="sig-box">
+    <div style="text-align: center; font-size: 11px; line-height: 1.25; margin: 0;">
+        ${activity.checkerSignature ?
+            `<div style="height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+                <img src="${activity.checkerSignature}" style="max-width: 100px; max-height: 40px; object-fit: contain; display: block;">
+            </div>` :
+            '<div class="line"></div>'
+        }
+        <div class="sig-name">( นางปณิตา ปัญญานะ )</div>
+        <div class="sig-title">ผู้ตรวจสอบ</div>
+    </div>
+</div>
                 <div class="sig-box">
-                    <div style="text-align: center; font-size: 11px; line-height: 1.25; margin: 0;">
-                        ${activity.checkerSignature ?
-                            `<div style="height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
-                                <img src="${activity.checkerSignature}" style="max-width: 100px; max-height: 40px; object-fit: contain; display: block;">
-                            </div>` :
-                            '<div class="line"></div>'
-                        }
-                        <div class="sig-name">( นางปณิตา ปัญญานะ )</div>
-                        <div class="sig-title">ผู้ตรวจสอบ</div>
-                    </div>
-                </div>
-                <div class="sig-box">
-                    <div style="text-align: center; font-size: 11px; line-height: 1.25; margin: 0;">
-                        ${activity.approverSignature ?
-                            `<div style="height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
-                                <img src="${activity.approverSignature}" style="max-width: 100px; max-height: 40px; object-fit: contain; display: block;">
-                            </div>` :
-                            '<div class="line"></div>'
-                        }
-                        <div class="sig-name">( นางภิรญา สอนศิริ )</div>
-                        <div class="sig-title">รองผู้อำนวยการสถานศึกษา</div>
-                    </div>
-                </div>
+    <div style="text-align: center; font-size: 11px; line-height: 1.25; margin: 0;">
+        ${activity.approverSignature ?
+            `<div style="height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+                <img src="${activity.approverSignature}" style="max-width: 100px; max-height: 40px; object-fit: contain; display: block;">
+            </div>` :
+            '<div class="line"></div>'
+        }
+        <div class="sig-name">( นางภิรญา สอนศิริ )</div>
+        <div class="sig-title">รองผู้อำนวยการสถานศึกษา</div>
+    </div>
+</div>
             </div>
         </body></html>`;
 
