@@ -1594,12 +1594,12 @@ function showSignatureModal(activity, userType) {
             ` : ''}
             
             <!-- ✍️ ลายเซ็นที่บันทึกไว้ -->
-            ${activity.checkerSignature ? `
-                <div style="margin-bottom: 20px; background: #f1f8e9; padding: 15px; border-radius: 10px; border-left: 4px solid #689f38;">
-                    <h5 style="color: #33691e; margin: 0 0 10px 0;">✍️ ลายเซ็นการตรวจสอบ:</h5>
-                    <img src="${activity.checkerSignature}" style="max-width: 300px; height: auto; border: 2px solid #689f38; border-radius: 8px; padding: 5px; background: #fafafa;">
-                </div>
-            ` : ''}
+            ${(activity.checkerSignature && activity.checkerSignature.length > 20) ?
+    `<div style="height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+        <img src="${activity.checkerSignature}" style="max-width: 100px; max-height: 40px; object-fit: contain; display: block;">
+    </div>` :
+    '<div class="line"></div>'
+}
             
             ${activity.approverSignature ? `
                 <div style="margin-bottom: 20px; background: #f1f8e9; padding: 15px; border-radius: 10px; border-left: 4px solid #689f38;">
@@ -3100,7 +3100,46 @@ function clearSignature() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 }
-
+// ✅ เพิ่มฟังก์ชันนี้ใหม่
+async function uploadSignatureFile(base64Data, fileName) {
+    try {
+        // ✅ ตรวจสอบว่ามีข้อมูลลายเซ็นจริง ๆ
+        if (!base64Data || base64Data.length < 100) {
+            console.warn('Signature data too short:', base64Data.length);
+            return { success: false, url: '' };
+        }
+        
+        // ✅ ส่งไป backend สำหรับบันทึก
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8'
+            },
+            body: JSON.stringify({
+                action: 'uploadSignature',
+                fileName: fileName,
+                imageData: base64Data
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log('✅ Signature uploaded:', result.url);
+            return { success: true, url: result.url };
+        } else {
+            console.error('Upload failed:', result.message);
+            return { success: false, url: '' };
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        return { success: false, url: '' };
+    }
+}
 async function saveSignatureAndContinue(activityId, userType) {
     const canvas = document.getElementById('signaturePad');
     const comment = document.getElementById('signComment').value.trim();
@@ -3147,14 +3186,30 @@ async function saveSignatureAndContinue(activityId, userType) {
     const action = userType === 'checker' ? 'submitCheck' : 'submitApproval';
     
     // ✅ เตรียมข้อมูล - ส่ง Base64 ลายเซ็นด้วย
-    const data = userType === 'checker' 
-        ? {
-            activityId,
-            checker: activity.checker,
-            checkerDate: activity.checkerDate,
-            checkerComment: comment,
-            checkerSignature: signatureBase64  // ✅ ส่งลายเซ็น
-          }
+    // ✅ อัปโหลดลายเซ็นก่อนและรอ URL กลับมา
+const signatureUploadResult = await uploadSignatureFile(
+    signatureBase64, 
+    `${userType}_sig_${activityId}_${Date.now()}.png`
+);
+
+const signatureUrl = signatureUploadResult.success ? signatureUploadResult.url : '';
+
+const data = userType === 'checker' 
+    ? {
+        activityId,
+        checker: 'ตรวจแล้ว',
+        checkerDate: new Date().toLocaleString('th-TH'),
+        checkerComment: comment,
+        checkerSignature: signatureUrl  // ✅ ส่ง URL ของลายเซ็น
+      }
+    : {
+        activityId,
+        approver: 'อนุมัติแล้ว',
+        approverDate: new Date().toLocaleString('th-TH'),
+        approvalStatus: 'ผ่าน',
+        approverComment: comment,
+        approverSignature: signatureUrl  // ✅ ส่ง URL ของลายเซ็น
+      };
         : {
             activityId,
             approver: activity.approver,
