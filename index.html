@@ -2100,9 +2100,11 @@ function renderApprovalSection(activity) {
                        activity.checker && activity.checkerSignature;
     
     return `<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-    ${checkerHtml}${approverHtml}
-</div>
-${hasAllData ? printButton : ''}`;
+                ${checkerHtml}
+                ${approverHtml}
+            </div>
+            ${hasAllData ? printButton : ''}`;
+}
 
 // ============================================
 // อัปเดต generatePDFReport - เพิ่มลายเซ็นใน PDF
