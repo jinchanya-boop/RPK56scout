@@ -1713,38 +1713,8 @@ function showSignatureModal(activity, userType) {
         ? `<div class="image-upload-grid">${activity.images.map(imgSrc => `<div><img src="${imgSrc}" style="width:100%; height: auto; border-radius: 8px; border: 1px solid #ddd;"></div>`).join('')}</div>`
         : '<p>ไม่มีรูปภาพสำหรับกิจกรรมนี้</p>';
 
-    // ✅ แสดงลายเซ็นผู้ตรวจ
-    const checkerSigDisplay = activity.checkerSignature 
-        ? `<div style="text-align: center; margin-top: 10px;">
-            <strong style="font-size: 12px; color: #666;">ลายเซ็นผู้ตรวจสอบ:</strong>
-            <div style="border: 1px solid #ddd; padding: 10px; border-radius: 8px; background: #fafafa; margin-top: 5px;">
-                <img src="${activity.checkerSignature}" 
-                     style="max-width: 150px; max-height: 70px; object-fit: contain;"
-                     alt="Checker Signature"
-                     onerror="this.alt='ไม่สามารถแสดงลายเซ็น'; this.style.display='none';">
-            </div>
-            <p style="font-size: 12px; color: #999; margin-top: 5px;">วันที่: ${activity.checkerDate || '-'}</p>
-            <p style="font-size: 12px; color: #666; margin-top: 3px;">ผู้ตรวจ: ${activity.checker || '-'}</p>
-            ${activity.checkerComment ? `<p style="font-size: 12px; color: #666; margin-top: 3px;">ความเห็น: ${activity.checkerComment}</p>` : ''}
-        </div>` 
-        : '<p style="color: #999; font-size: 12px;">ยังไม่มีลายเซ็นผู้ตรวจสอบ</p>';
-
-    // ✅ แสดงลายเซ็นผู้อนุมัติ
-    const approverSigDisplay = activity.approverSignature 
-        ? `<div style="text-align: center; margin-top: 10px;">
-            <strong style="font-size: 12px; color: #666;">ลายเซ็นผู้อนุมัติ:</strong>
-            <div style="border: 1px solid #ddd; padding: 10px; border-radius: 8px; background: #fafafa; margin-top: 5px;">
-                <img src="${activity.approverSignature}" 
-                     style="max-width: 150px; max-height: 70px; object-fit: contain;"
-                     alt="Approver Signature"
-                     onerror="this.alt='ไม่สามารถแสดงลายเซ็น'; this.style.display='none';">
-            </div>
-            <p style="font-size: 12px; color: #999; margin-top: 5px;">วันที่: ${activity.approverDate || '-'}</p>
-            <p style="font-size: 12px; color: #666; margin-top: 3px;">ผู้อนุมัติ: ${activity.approver || '-'}</p>
-            <p style="font-size: 12px; color: #666; margin-top: 3px;">สถานะ: ${activity.approvalStatus || '-'}</p>
-            ${activity.approverComment ? `<p style="font-size: 12px; color: #666; margin-top: 3px;">ความเห็น: ${activity.approverComment}</p>` : ''}
-        </div>` 
-        : '<p style="color: #999; font-size: 12px;">ยังไม่มีลายเซ็นผู้อนุมัติ</p>';
+    // ✅ ใช้ renderApprovalSection แทน hardcode HTML
+    const approvalSection = renderApprovalSection(activity);
 
     const content = `
         <div class="info-card">
@@ -1772,22 +1742,13 @@ function showSignatureModal(activity, userType) {
         
         <div class="info-card">
             <h3>✍️ ลายเซ็นและการตรวจสอบ</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div style="border: 1px solid #e9ecef; padding: 15px; border-radius: 10px; background: #f8f9fa;">
-                    <h4 style="color: #1e3c72; margin: 0 0 15px 0;">✅ การตรวจสอบ</h4>
-                    ${checkerSigDisplay}
-                </div>
-                <div style="border: 1px solid #e9ecef; padding: 15px; border-radius: 10px; background: #f8f9fa;">
-                    <h4 style="color: #1e3c72; margin: 0 0 15px 0;">🔖 การอนุมัติ</h4>
-                    ${approverSigDisplay}
-                </div>
-            </div>
+            ${approvalSection}
         </div>
     `;
     
     createModal(`activityDetail_${activity.id}`, `รายละเอียดกิจกรรม: ${activity.name}`, content);
 }
-
+    
     function generatePDFReport(activityId) {
     const activity = activitiesData.find(a => a.id === activityId);
     if (!activity) { 
@@ -2015,12 +1976,17 @@ Activity: ${a.name}
 function renderApprovalSection(activity) {
     let checkerHtml, approverHtml, printButton = '';
 
-    // ✅ สำคัญ: แสดงปุ่ม PDF เมื่อมีทั้ง checker และ approver
-    if (activity.approver && activity.checker) {
+    // ✅ สำคัญ: แสดงปุ่ม PDF เมื่อมีทั้ง checker, approver และลายเซ็นครบ
+    const hasAllData = activity.approver && activity.approverSignature && 
+                       activity.checker && activity.checkerSignature;
+    
+    if (hasAllData) {
         printButton = `
-            <div style="margin-top: 15px; text-align: center;">
+            <div style="margin-top: 20px; text-align: center;">
                 <button class="btn btn-success" 
-                        style="width: 100%; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 12px 24px; font-size: 16px;"
+                        style="width: 100%; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 14px 28px; font-size: 16px; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s;"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 25px rgba(40, 167, 69, 0.3)';"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';"
                         onclick="generatePDFReport('${activity.id}')">
                     🖨️ พิมพ์รายงาน PDF
                 </button>
@@ -2028,82 +1994,84 @@ function renderApprovalSection(activity) {
         `;
     }
 
+    // ✅ ตรวจสอบสถานะผู้ตรวจสอบ
     if (!activity.checker) {
         checkerHtml = `
             <div class="approval-box">
-                <h4>✅ การตรวจสอบ</h4>
-                <p style="color: #ffc107;"><strong>สถานะ:</strong> ⏳ รอตรวจสอบ</p>
+                <h4 style="margin: 0 0 10px 0; color: #1e3c72;">✅ การตรวจสอบ</h4>
+                <p style="color: #ffc107; margin: 0;"><strong>สถานะ:</strong> ⏳ รอตรวจสอบ</p>
             </div>
         `;
     } else {
-        // ✅ แสดงลายเซ็นผู้ตรวจ
+        // ✅ มีลายเซ็นผู้ตรวจ
         const checkerSigDisplay = activity.checkerSignature 
-            ? `<div style="margin-top: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center;">
-                    <strong style="font-size: 12px; color: #666;">ลายเซ็นดิจิทัล:</strong><br>
+            ? `<div style="margin-top: 12px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center; background: white;">
+                    <strong style="font-size: 11px; color: #666; display: block; margin-bottom: 8px;">ลายเซ็นดิจิทัล:</strong>
                     <img src="${activity.checkerSignature}" 
-                         style="max-width: 120px; max-height: 60px; margin-top: 5px; object-fit: contain; border: 1px solid #ccc; padding: 2px; border-radius: 3px;"
+                         style="max-width: 120px; max-height: 60px; object-fit: contain; border: 1px solid #ccc; padding: 2px; border-radius: 3px;"
                          alt="Checker Signature"
-                         onerror="this.parentElement.innerHTML='<p style=\\'color: #999;\\'>ไม่สามารถแสดงลายเซ็น</p>'">
+                         onerror="this.parentElement.innerHTML='<p style=\\'color: #999; font-size: 12px;\\'>ไม่สามารถแสดงลายเซ็น</p>'">
                 </div>`
             : '';
         
         checkerHtml = `
             <div class="approval-box">
-                <h4>✅ การตรวจสอบ</h4>
-                <p style="color: #28a745;"><strong>สถานะ:</strong> ✔️ ตรวจแล้ว</p>
-                <p><strong>วันที่ตรวจ:</strong> ${activity.checkerDate}</p>
-                <p><strong>ความคิดเห็น:</strong> ${activity.checkerComment || 'ไม่มี'}</p>
+                <h4 style="margin: 0 0 10px 0; color: #1e3c72;">✅ การตรวจสอบ</h4>
+                <p style="color: #28a745; margin: 5px 0;"><strong>สถานะ:</strong> ✔️ ตรวจแล้ว</p>
+                <p style="margin: 5px 0; font-size: 13px;"><strong>วันที่ตรวจ:</strong> ${activity.checkerDate || '-'}</p>
+                <p style="margin: 5px 0; font-size: 13px;"><strong>ผู้ตรวจ:</strong> ${activity.checker || '-'}</p>
+                ${activity.checkerComment ? `<p style="margin: 5px 0; font-size: 13px;"><strong>ความเห็น:</strong> ${activity.checkerComment}</p>` : ''}
                 ${checkerSigDisplay}
             </div>
         `;
     }
 
+    // ✅ ตรวจสอบสถานะผู้อนุมัติ
     if (!activity.checker) {
         approverHtml = `
             <div class="approval-box">
-                <h4 style="color:#6c757d;">🔖 การอนุมัติ</h4>
-                <p><strong>สถานะ:</strong> ⏸️ รอตรวจสอบก่อน</p>
+                <h4 style="margin: 0 0 10px 0; color: #999;">🔖 การอนุมัติ</h4>
+                <p style="color: #999; margin: 0; font-size: 13px;"><strong>สถานะ:</strong> ⏸️ รอตรวจสอบก่อน</p>
             </div>
         `;
     } else if (!activity.approver) {
         approverHtml = `
             <div class="approval-box">
-                <h4>🔖 การอนุมัติ</h4>
-                <p style="color: #ffc107;"><strong>สถานะ:</strong> ⏳ รออนุมัติ</p>
+                <h4 style="margin: 0 0 10px 0; color: #1e3c72;">🔖 การอนุมัติ</h4>
+                <p style="color: #ffc107; margin: 0;"><strong>สถานะ:</strong> ⏳ รออนุมัติ</p>
             </div>
         `;
     } else {
-        // ✅ แสดงลายเซ็นผู้อนุมัติ
+        // ✅ มีลายเซ็นผู้อนุมัติ
         const approverSigDisplay = activity.approverSignature 
-            ? `<div style="margin-top: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center;">
-                    <strong style="font-size: 12px; color: #666;">ลายเซ็นดิจิทัล:</strong><br>
+            ? `<div style="margin-top: 12px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center; background: white;">
+                    <strong style="font-size: 11px; color: #666; display: block; margin-bottom: 8px;">ลายเซ็นดิจิทัล:</strong>
                     <img src="${activity.approverSignature}" 
-                         style="max-width: 120px; max-height: 60px; margin-top: 5px; object-fit: contain; border: 1px solid #ccc; padding: 2px; border-radius: 3px;"
+                         style="max-width: 120px; max-height: 60px; object-fit: contain; border: 1px solid #ccc; padding: 2px; border-radius: 3px;"
                          alt="Approver Signature"
-                         onerror="this.parentElement.innerHTML='<p style=\\'color: #999;\\'>ไม่สามารถแสดงลายเซ็น</p>'">
+                         onerror="this.parentElement.innerHTML='<p style=\\'color: #999; font-size: 12px;\\'>ไม่สามารถแสดงลายเซ็น</p>'">
                 </div>`
             : '';
         
         approverHtml = `
             <div class="approval-box">
-                <h4>🔖 การอนุมัติ</h4>
-                <p style="color: ${activity.approvalStatus === 'ผ่าน' ? '#28a745' : '#dc3545'};"><strong>สถานะ:</strong> ${activity.approvalStatus === 'ผ่าน' ? '✔️ ผ่าน' : '❌ ไม่ผ่าน'}</p>
-                <p><strong>วันที่อนุมัติ:</strong> ${activity.approverDate}</p>
-                <p><strong>ความคิดเห็น:</strong> ${activity.approverComment || 'ไม่มี'}</p>
+                <h4 style="margin: 0 0 10px 0; color: #1e3c72;">🔖 การอนุมัติ</h4>
+                <p style="color: ${activity.approvalStatus === 'ผ่าน' ? '#28a745' : '#dc3545'}; margin: 5px 0;"><strong>สถานะ:</strong> ${activity.approvalStatus === 'ผ่าน' ? '✔️ ผ่าน' : '❌ ไม่ผ่าน'}</p>
+                <p style="margin: 5px 0; font-size: 13px;"><strong>วันที่อนุมัติ:</strong> ${activity.approverDate || '-'}</p>
+                <p style="margin: 5px 0; font-size: 13px;"><strong>ผู้อนุมัติ:</strong> ${activity.approver || '-'}</p>
+                ${activity.approverComment ? `<p style="margin: 5px 0; font-size: 13px;"><strong>ความเห็น:</strong> ${activity.approverComment}</p>` : ''}
                 ${approverSigDisplay}
             </div>
         `;
     }
-
-    // ✅ ตรวจสอบว่ามีลายเซ็นทั้งสองข้างหรือไม่
-    const hasAllData = activity.approver && activity.approverSignature && 
-                       activity.checker && activity.checkerSignature;
     
-    return `<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                ${checkerHtml}
-                ${approverHtml}
-            </div>
-            ${hasAllData ? printButton : ''}`;
+    return `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            ${checkerHtml}
+            ${approverHtml}
+        </div>
+        ${printButton}
+    `;
 }
 
 // ============================================
