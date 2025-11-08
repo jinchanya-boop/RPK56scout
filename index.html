@@ -1738,15 +1738,19 @@ function showSignatureModal(activity, userType) {
 
     function generatePDFReport(activityId) {
     const activity = activitiesData.find(a => a.id === activityId);
-    if (!activity) { return alert('ไม่พบข้อมูลกิจกรรม'); }
+    if (!activity) { 
+        return alert('ไม่พบข้อมูลกิจกรรม'); 
+    }
 
     let total = 0, present = 0, absent = 0, leave = 0, skip = 0;
     if (activity.attendance) {
         activity.attendance.forEach(r => {
             total++;
             switch(r.status) {
-                case 'present': present++; break; case 'leave': leave++; break;
-                case 'absent': absent++; break; case 'skip': skip++; break;
+                case 'present': present++; break; 
+                case 'leave': leave++; break;
+                case 'absent': absent++; break; 
+                case 'skip': skip++; break;
             }
         });
     }
@@ -1754,18 +1758,26 @@ function showSignatureModal(activity, userType) {
     const imageBoxes = (activity.images && activity.images.length > 0)
         ? activity.images.map(imgSrc => `<div class="photo-box"><img src="${imgSrc}" alt="Activity Photo"></div>`).join('')
         : Array(4).fill('<div class="photo-box empty"><span style="color: #999; font-size: 12px;">ไม่มีรูปภาพ</span></div>').join('');
-    // ✅ สร้างตัวแปร HTML สำหรับลายเซ็น
+    
+    // ✅ สร้างตัวแปร HTML สำหรับลายเซ็น - ตรวจสอบทั้ง URL และ Base64
     const checkerSignatureHtml = activity.checkerSignature 
         ? `<div style="height: 45px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; border: 1px solid #ddd; padding: 3px; border-radius: 3px; background: #f9f9f9;">
-                <img src="${activity.checkerSignature}" style="max-width: 90px; max-height: 40px; object-fit: contain;" alt="Checker Signature">
+                <img src="${activity.checkerSignature}" 
+                     style="max-width: 90px; max-height: 40px; object-fit: contain;" 
+                     alt="Checker Signature"
+                     onerror="this.style.display='none'">
             </div>`
         : '<div class="line"></div>';
     
     const approverSignatureHtml = activity.approverSignature
         ? `<div style="height: 45px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; border: 1px solid #ddd; padding: 3px; border-radius: 3px; background: #f9f9f9;">
-                <img src="${activity.approverSignature}" style="max-width: 90px; max-height: 40px; object-fit: contain;" alt="Approver Signature">
+                <img src="${activity.approverSignature}" 
+                     style="max-width: 90px; max-height: 40px; object-fit: contain;" 
+                     alt="Approver Signature"
+                     onerror="this.style.display='none'">
             </div>`
         : '<div class="line"></div>';
+    
     const printHtml = `
         <!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานการปฏิบัติกิจกรรมของลูกเสือ - ${activity.name}</title>
         <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
@@ -1790,7 +1802,7 @@ function showSignatureModal(activity, userType) {
                 display: flex;
                 border-bottom: 1px dotted #ccc;
                 padding-bottom: 1px;
-                font-size: 16px;
+                font-size: 14px;
                 line-height: 1.2;
             }
             .field-label { 
@@ -1806,7 +1818,7 @@ function showSignatureModal(activity, userType) {
             }
             .photo-section-header {
                 font-weight: 700;
-                font-size: 16px;
+                font-size: 14px;
                 margin-top: 0.2cm;
                 margin-bottom: 0.2cm;
             }
@@ -1838,13 +1850,14 @@ function showSignatureModal(activity, userType) {
                 flex-direction: column; 
                 justify-content: flex-end; 
                 height: 1.8cm;
-                font-size: 11px;
+                font-size: 10px;
             }
             .sig-box img {
                 max-width: 75px;
                 max-height: 30px;
                 margin-bottom: 1px;
                 border: 1px solid #ddd;
+                object-fit: contain;
             }
             .line { 
                 border-bottom: 1px solid #000; 
@@ -1856,11 +1869,11 @@ function showSignatureModal(activity, userType) {
                 font-weight: normal; 
                 line-height: 1.25;
                 margin: 0;
-                font-size: 11px;
+                font-size: 10px;
             }
             .sig-title { 
                 line-height: 1.2;
-                font-size: 11px;
+                font-size: 10px;
             }
 
             @media print {
@@ -1888,26 +1901,26 @@ function showSignatureModal(activity, userType) {
             
             <div class="signatures-section">
                 <div class="sig-box">
-                    <div style="text-align: center; font-size: 11px; line-height: 1.25; margin: 0;">
+                    <div style="text-align: center;">
                         <div class="line"></div>
                         <div class="sig-name">( ..........................................  )</div>
                         <div class="sig-title">ผู้รายงาน</div>
                     </div>
                 </div>
                 <div class="sig-box">
-    <div style="line-height: 1.25;">
-        ${checkerSignatureHtml}
-        <div class="sig-name">( นางปณิตา ปัญญานะ )</div>
-        <div class="sig-title">ผู้ตรวจสอบ</div>
-    </div>
-</div>
+                    <div style="line-height: 1.25; text-align: center;">
+                        ${checkerSignatureHtml}
+                        <div class="sig-name">( นางปณิตา ปัญญานะ )</div>
+                        <div class="sig-title">ผู้ตรวจสอบ</div>
+                    </div>
+                </div>
                 <div class="sig-box">
-    <div style="line-height: 1.25;">
-        ${approverSignatureHtml}
-        <div class="sig-name">( นางภิรญา สอนศิริ )</div>
-        <div class="sig-title">รองผู้อำนวยการสถานศึกษา</div>
-    </div>
-</div>
+                    <div style="line-height: 1.25; text-align: center;">
+                        ${approverSignatureHtml}
+                        <div class="sig-name">( นางภิรญา สอนศิริ )</div>
+                        <div class="sig-title">รองผู้อำนวยการสถานศึกษา</div>
+                    </div>
+                </div>
             </div>
         </body></html>`;
 
@@ -1916,7 +1929,9 @@ function showSignatureModal(activity, userType) {
     printWindow.document.close();
     printWindow.onload = () => { 
         printWindow.focus();
-        printWindow.print(); 
+        setTimeout(() => {
+            printWindow.print();
+        }, 500);
     };
 }
     
@@ -1936,17 +1951,27 @@ function renderApprovalSection(activity) {
             <div class="approval-box">
                 <h4>✅ การตรวจสอบ</h4>
                 <p style="color: #ffc107;"><strong>สถานะ:</strong> ⏳ รอตรวจสอบ</p>
-                <button class="btn btn-success" onclick="showLoginModal('checker')">🔐 เข้าสู่ระบบเพื่อตรวจสอบ</button>
             </div>
         `;
     } else {
+        // ✅ แสดงลายเซ็นที่บันทึกไว้
+        const checkerSigDisplay = activity.checkerSignature 
+            ? `<div style="margin-top: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center;">
+                    <strong style="font-size: 12px; color: #666;">ลายเซ็นดิจิทัล:</strong><br>
+                    <img src="${activity.checkerSignature}" 
+                         style="max-width: 120px; max-height: 60px; margin-top: 5px; object-fit: contain; border: 1px solid #ccc; padding: 2px; border-radius: 3px;"
+                         alt="Checker Signature"
+                         onerror="this.parentElement.innerHTML='<p style=\\'color: #999;\\'>ไม่สามารถแสดงลายเซ็น</p>'">
+                </div>`
+            : '';
+        
         checkerHtml = `
             <div class="approval-box">
                 <h4>✅ การตรวจสอบ</h4>
                 <p style="color: #28a745;"><strong>สถานะ:</strong> ✔️ ตรวจแล้ว</p>
                 <p><strong>วันที่ตรวจ:</strong> ${activity.checkerDate}</p>
                 <p><strong>ความคิดเห็น:</strong> ${activity.checkerComment || 'ไม่มี'}</p>
-                ${activity.checkerSignature ? `<div style="margin-top: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center;"><strong style="font-size: 12px; color: #666;">ลายเซ็นดิจิทัล:</strong><br><img src="${activity.checkerSignature}" style="max-width: 120px; max-height: 60px; margin-top: 5px;"></div>` : ''}
+                ${checkerSigDisplay}
             </div>
         `;
     }
@@ -1963,17 +1988,27 @@ function renderApprovalSection(activity) {
             <div class="approval-box">
                 <h4>🔖 การอนุมัติ</h4>
                 <p style="color: #ffc107;"><strong>สถานะ:</strong> ⏳ รออนุมัติ</p>
-                <button class="btn btn-success" onclick="showLoginModal('approver')">🔐 เข้าสู่ระบบเพื่ออนุมัติ</button>
             </div>
         `;
     } else {
+        // ✅ แสดงลายเซ็นที่บันทึกไว้
+        const approverSigDisplay = activity.approverSignature 
+            ? `<div style="margin-top: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center;">
+                    <strong style="font-size: 12px; color: #666;">ลายเซ็นดิจิทัล:</strong><br>
+                    <img src="${activity.approverSignature}" 
+                         style="max-width: 120px; max-height: 60px; margin-top: 5px; object-fit: contain; border: 1px solid #ccc; padding: 2px; border-radius: 3px;"
+                         alt="Approver Signature"
+                         onerror="this.parentElement.innerHTML='<p style=\\'color: #999;\\'>ไม่สามารถแสดงลายเซ็น</p>'">
+                </div>`
+            : '';
+        
         approverHtml = `
             <div class="approval-box">
                 <h4>🔖 การอนุมัติ</h4>
                 <p style="color: ${activity.approvalStatus === 'ผ่าน' ? '#28a745' : '#dc3545'};"><strong>สถานะ:</strong> ${activity.approvalStatus === 'ผ่าน' ? '✔️ ผ่าน' : '❌ ไม่ผ่าน'}</p>
                 <p><strong>วันที่อนุมัติ:</strong> ${activity.approverDate}</p>
                 <p><strong>ความคิดเห็น:</strong> ${activity.approverComment || 'ไม่มี'}</p>
-                ${activity.approverSignature ? `<div style="margin-top: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center;"><strong style="font-size: 12px; color: #666;">ลายเซ็นดิจิทัล:</strong><br><img src="${activity.approverSignature}" style="max-width: 120px; max-height: 60px; margin-top: 5px;"></div>` : ''}
+                ${approverSigDisplay}
                 ${printButton}
             </div>
         `;
@@ -2182,25 +2217,19 @@ function updateResponsibleSelection() {
     try {
         const url = API_URL;
         
-        // ✅ ตรวจสอบ URL
         if (!url) {
             throw new Error('API_URL ไม่ได้ตั้งค่า');
         }
         
-        console.log('🔍 Debug Info:');
-        console.log('URL:', url);
-        console.log('Action:', action);
-        console.log('Data:', data);
+        console.log('🔍 Posting to:', action);
         
-        // ✅ FIX: เตรียมข้อมูลให้ถูกต้อง - ใส่ action เข้าไปใน data object
         const payload = {
             action: action,
             ...data
         };
         
-        console.log('📤 Sending:', payload);
+        console.log('📤 Payload size:', JSON.stringify(payload).length, 'bytes');
         
-        // ✅ FIX: ส่งแบบ JSON ตรงๆ แทน URLSearchParams
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -2211,19 +2240,15 @@ function updateResponsibleSelection() {
         
         console.log('📊 Response Status:', response.status);
         
-        // ✅ ตรวจสอบ HTTP response
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        // ✅ parse JSON
         const result = await response.json();
         
-        console.log('✅ Response:', result);
+        console.log('✅ Server Response:', result);
         
-        // ✅ ตรวจสอบผลลัพธ์
         if (result.success) {
-            console.log('✅ Success:', result.message);
             if (successMessage) {
                 alert(successMessage + '\n' + (result.message || 'สำเร็จ'));
             }
@@ -2235,7 +2260,6 @@ function updateResponsibleSelection() {
         
     } catch (error) {
         console.error('❌ Post error:', error);
-        console.error('Stack:', error.stack);
         alert('❌ เกิดข้อผิดพลาด:\n' + error.message);
         return { success: false, message: error.message };
     }
@@ -3112,6 +3136,7 @@ async function saveSignatureAndContinue(activityId, userType) {
         return;
     }
     
+    // ✅ ตรวจสอบว่ามีการวาดลายเซ็นหรือไม่
     const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
     const hasSignature = imageData.data.some((pixel, index) => {
         return index % 4 !== 3 && pixel !== 255;
@@ -3122,8 +3147,13 @@ async function saveSignatureAndContinue(activityId, userType) {
         return;
     }
     
-    // ✅ เก็บ Base64 โดยตรง
+    // ✅ แปลง canvas เป็น Base64 PNG
     const signatureBase64 = canvas.toDataURL('image/png');
+    
+    console.log('✅ Signature created:');
+    console.log('Length:', signatureBase64.length);
+    console.log('First 100 chars:', signatureBase64.substring(0, 100));
+    
     const activity = activitiesData.find(a => a.id === activityId);
     
     if (!activity) {
@@ -3154,7 +3184,7 @@ async function saveSignatureAndContinue(activityId, userType) {
             checker: activity.checker,
             checkerDate: activity.checkerDate,
             checkerComment: comment,
-            checkerSignature: signatureBase64  // ✅ ส่งลายเซ็น
+            checkerSignature: signatureBase64  // ✅ ส่งลายเซ็น Base64
           }
         : {
             activityId,
@@ -3162,16 +3192,22 @@ async function saveSignatureAndContinue(activityId, userType) {
             approverDate: activity.approverDate,
             approvalStatus: activity.approvalStatus,
             approverComment: comment,
-            approverSignature: signatureBase64  // ✅ ส่งลายเซ็น
+            approverSignature: signatureBase64  // ✅ ส่งลายเซ็น Base64
           };
     
-    console.log('Sending data:', data);
+    console.log('📤 Sending data:', {
+        action: action,
+        activityId: data.activityId,
+        signatureLength: data.checkerSignature?.length || data.approverSignature?.length
+    });
     
     // ✅ ส่งไป backend
     try {
         const response = await postData(action, data);
         
         if (response && response.success) {
+            console.log('✅ Server response:', response);
+            
             // ✅ ปิด modal
             const modal = document.getElementById(`signModal_${activityId}`);
             if (modal) modal.remove();
@@ -3189,10 +3225,6 @@ async function saveSignatureAndContinue(activityId, userType) {
                 } else {
                     displayPendingApprovals();
                 }
-                
-                // ⚠️ ไม่ต้องรีเซ็ต currentUser เพื่อให้ login ค้างอยู่
-                // currentUser = null;
-                // isSessionActive = false;
             }, 1500);
         } else {
             alert('บันทึกไม่สำเร็จ: ' + (response?.message || 'ข้อผิดพลาดไม่ทราบ'));
