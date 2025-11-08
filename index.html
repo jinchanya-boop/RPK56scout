@@ -1754,7 +1754,18 @@ function showSignatureModal(activity, userType) {
     const imageBoxes = (activity.images && activity.images.length > 0)
         ? activity.images.map(imgSrc => `<div class="photo-box"><img src="${imgSrc}" alt="Activity Photo"></div>`).join('')
         : Array(4).fill('<div class="photo-box empty"><span style="color: #999; font-size: 12px;">ไม่มีรูปภาพ</span></div>').join('');
-
+    // ✅ สร้างตัวแปร HTML สำหรับลายเซ็น
+    const checkerSignatureHtml = activity.checkerSignature 
+        ? `<div style="height: 45px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; border: 1px solid #ddd; padding: 3px; border-radius: 3px; background: #f9f9f9;">
+                <img src="${activity.checkerSignature}" style="max-width: 90px; max-height: 40px; object-fit: contain;" alt="Checker Signature">
+            </div>`
+        : '<div class="line"></div>';
+    
+    const approverSignatureHtml = activity.approverSignature
+        ? `<div style="height: 45px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; border: 1px solid #ddd; padding: 3px; border-radius: 3px; background: #f9f9f9;">
+                <img src="${activity.approverSignature}" style="max-width: 90px; max-height: 40px; object-fit: contain;" alt="Approver Signature">
+            </div>`
+        : '<div class="line"></div>';
     const printHtml = `
         <!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานการปฏิบัติกิจกรรมของลูกเสือ - ${activity.name}</title>
         <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
@@ -1884,25 +1895,15 @@ function showSignatureModal(activity, userType) {
                     </div>
                 </div>
                 <div class="sig-box">
-                    <div style="text-align: center; font-size: 11px; line-height: 1.25; margin: 0;">
-                        ${activity.checkerSignature ?
-                            `<div style="height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
-                                <img src="${activity.checkerSignature}" style="max-width: 100px; max-height: 40px; object-fit: contain; display: block;">
-                            </div>` :
-                            '<div class="line"></div>'
-                        }
-                        <div class="sig-name">( นางปณิตา ปัญญานะ )</div>
-                        <div class="sig-title">ผู้ตรวจสอบ</div>
-                    </div>
-                </div>
+    <div style="line-height: 1.25;">
+        ${checkerSignatureHtml}
+        <div class="sig-name">( นางปณิตา ปัญญานะ )</div>
+        <div class="sig-title">ผู้ตรวจสอบ</div>
+    </div>
+</div>
                 <div class="sig-box">
-    <div style="text-align: center; font-size: 11px; line-height: 1.25; margin: 0;">
-        ${activity.approverSignature ?
-            `<div style="height: 40px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
-                <img src="${activity.approverSignature}" style="max-width: 100px; max-height: 40px; object-fit: contain; display: block;">
-            </div>` :
-            '<div class="line"></div>'
-        }
+    <div style="line-height: 1.25;">
+        ${approverSignatureHtml}
         <div class="sig-name">( นางภิรญา สอนศิริ )</div>
         <div class="sig-title">รองผู้อำนวยการสถานศึกษา</div>
     </div>
