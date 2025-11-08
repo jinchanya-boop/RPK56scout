@@ -1726,7 +1726,7 @@ function showSignatureModal(activity, userType) {
                 <div><strong>👤 ผู้รับผิดชอบ:</strong> <span>${activity.responsible}</span></div>
                 <div><strong>📝 ผู้รายงาน:</strong> <span>${activity.reporter || '-'}</span></div>
             </div>
-            <div style="margin-top: 15px;"><strong>📋 รายละเอียดกิจกรรม:</strong><div class="description-box">${activity.description}</div></div>
+            <div style="margin-top: 20px;"><strong>📋 รายละเอียดกิจกรรม:</strong><div class="description-box">${activity.description}</div></div>
         </div>
         <div class="info-card"><h3>📷 ภาพกิจกรรม</h3>${imagesHtml}</div>
         <div class="info-card">
@@ -1982,7 +1982,7 @@ function renderApprovalSection(activity) {
     
     if (hasAllData) {
         printButton = `
-            <div style="margin-top: 30px; text-align: center;">
+            <div style="margin-top: 40px; text-align: center;">
                 <button class="btn btn-success" 
                         style="width: 100%; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 14px 28px; font-size: 16px; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; transition: all 0.3s;"
                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 25px rgba(40, 167, 69, 0.3)';"
@@ -2005,7 +2005,7 @@ function renderApprovalSection(activity) {
     } else {
         // ✅ มีลายเซ็นผู้ตรวจ
         const checkerSigDisplay = activity.checkerSignature 
-            ? `<div style="margin-top: 15px; border: 1px solid #ddd; padding: 12px; border-radius: 5px; text-align: center; background: white;">
+            ? `<div style="margin-top: 20px; border: 1px solid #ddd; padding: 12px; border-radius: 5px; text-align: center; background: white;">
                     <strong style="font-size: 11px; color: #666; display: block; margin-bottom: 10px;">ลายเซ็นดิจิทัล:</strong>
                     <img src="${activity.checkerSignature}" 
                          style="max-width: 120px; max-height: 60px; object-fit: contain; border: 1px solid #ccc; padding: 2px; border-radius: 3px;"
@@ -2044,7 +2044,7 @@ function renderApprovalSection(activity) {
     } else {
         // ✅ มีลายเซ็นผู้อนุมัติ
         const approverSigDisplay = activity.approverSignature 
-            ? `<div style="margin-top: 15px; border: 1px solid #ddd; padding: 12px; border-radius: 5px; text-align: center; background: white;">
+            ? `<div style="margin-top: 20px; border: 1px solid #ddd; padding: 12px; border-radius: 5px; text-align: center; background: white;">
                     <strong style="font-size: 11px; color: #666; display: block; margin-bottom: 10px;">ลายเซ็นดิจิทัล:</strong>
                     <img src="${activity.approverSignature}" 
                          style="max-width: 120px; max-height: 60px; object-fit: contain; border: 1px solid #ccc; padding: 2px; border-radius: 3px;"
@@ -2066,13 +2066,14 @@ function renderApprovalSection(activity) {
     }
     
     return `
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; padding-top: 20px; border-top: 2px solid #f0f0f0;">
             ${checkerHtml}
             ${approverHtml}
         </div>
         ${printButton}
     `;
 }
+    
 // ============================================
 // อัปเดต generatePDFReport - เพิ่มลายเซ็นใน PDF
 // ============================================
@@ -2131,7 +2132,7 @@ ${activity.approverSignature ? `
                 <div id="responsibleCheckboxList" style="background: #f8f9fa; padding: 15px; border-radius: 8px; max-height: 250px; overflow-y: auto; border: 2px solid #e9ecef;">
                     ${teacherCheckboxes}
                 </div>
-                <div style="margin-top: 10px; padding: 10px; background: #e7f3ff; border-radius: 5px; font-size: 14px; color: #0066cc;">
+                <div style="margin-top: 15px; padding: 10px; background: #e7f3ff; border-radius: 5px; font-size: 14px; color: #0066cc;">
                     ✓ ที่เลือก: <span id="selectedResponsibleCount" style="font-weight: 700;">0</span>/4 คน
                 </div>
                 <div id="selectedResponsiblePreview" style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 5px; border-left: 4px solid #ffc107; display: none;">
@@ -3065,7 +3066,7 @@ function showPendingReports(userType) {
                             <span>🎯 ${activity.grade}</span>
                             <span>👤 ${activity.reporter}</span>
                         </div>
-                        <div style="margin-top: 10px; text-align: right;">
+                        <div style="margin-top: 15px; text-align: right;">
                             <button class="btn btn-success" onclick="selectActivityForSign('${activity.id}', '${userType}')">ลงนาม</button>
                         </div>
                     </div>
