@@ -1808,10 +1808,10 @@ function showSignatureModal(activity, userType) {
     }
     
     const imageBoxes = (activity.images && activity.images.length > 0)
-        ? activity.images.map(imgSrc => `<div class="photo-box"><img src="${imgSrc}" alt="Activity Photo"></div>`).join('')
+        ? activity.images.map(imgSrc => `<div class="photo-box"><img src="${imgSrc}" alt="Activity Photo" style="max-width: 100%; max-height: 100%; object-fit: contain;"></div>`).join('')
         : Array(4).fill('<div class="photo-box empty"><span style="color: #999; font-size: 12px;">ไม่มีรูปภาพ</span></div>').join('');
     
-    // ✅ ใช้ Base64 ลายเซ็นโดยตรง
+    // ✅ ลายเซ็นผู้ตรวจ
     const checkerSignatureHtml = activity.checkerSignature 
         ? `<div style="height: 50px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; border: 1px solid #ddd; padding: 3px; border-radius: 3px; background: #f9f9f9; page-break-inside: avoid;">
                 <img src="${activity.checkerSignature}" 
@@ -1820,6 +1820,7 @@ function showSignatureModal(activity, userType) {
             </div>`
         : '<div class="line"></div>';
     
+    // ✅ ลายเซ็นผู้อนุมัติ
     const approverSignatureHtml = activity.approverSignature
         ? `<div style="height: 50px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; border: 1px solid #ddd; padding: 3px; border-radius: 3px; background: #f9f9f9; page-break-inside: avoid;">
                 <img src="${activity.approverSignature}" 
@@ -1984,7 +1985,29 @@ function showSignatureModal(activity, userType) {
         }, 500);
     };
 }
+
+function debugPDFButton() {
+    console.group('🖨️ PDF Button Debug');
     
+    const activitiesWithApprover = activitiesData.filter(a => a.approver && a.checker);
+    
+    console.log('Total activities:', activitiesData.length);
+    console.log('With approver:', activitiesWithApprover.length);
+    
+    activitiesWithApprover.forEach(a => {
+        console.log(`
+Activity: ${a.name}
+  - Checker: ${a.checker ? '✅' : '❌'}
+  - Approver: ${a.approver ? '✅' : '❌'}
+  - Checker Sig: ${a.checkerSignature ? '✅' : '❌'}
+  - Approver Sig: ${a.approverSignature ? '✅' : '❌'}
+  - Should show PDF button: ${a.approver && a.checker ? '✅ YES' : '❌ NO'}
+        `);
+    });
+    
+    console.groupEnd();
+}
+
     // ============================================
 // อัปเดต renderApprovalSection - ใช้รหัสผ่านเท่านั้น
 // ============================================
@@ -1992,8 +2015,17 @@ function showSignatureModal(activity, userType) {
 function renderApprovalSection(activity) {
     let checkerHtml, approverHtml, printButton = '';
 
-    if (activity.approver) {
-        printButton = `<button class="btn btn-success" style="margin-top: 10px;" onclick="generatePDFReport('${activity.id}')">🖨️ พิมพ์รายงาน PDF</button>`;
+    // ✅ สำคัญ: แสดงปุ่ม PDF เมื่อมีทั้ง checker และ approver
+    if (activity.approver && activity.checker) {
+        printButton = `
+            <div style="margin-top: 15px; text-align: center;">
+                <button class="btn btn-success" 
+                        style="width: 100%; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 12px 24px; font-size: 16px;"
+                        onclick="generatePDFReport('${activity.id}')">
+                    🖨️ พิมพ์รายงาน PDF
+                </button>
+            </div>
+        `;
     }
 
     if (!activity.checker) {
@@ -2004,7 +2036,7 @@ function renderApprovalSection(activity) {
             </div>
         `;
     } else {
-        // ✅ แสดงลายเซ็นที่บันทึกไว้
+        // ✅ แสดงลายเซ็นผู้ตรวจ
         const checkerSigDisplay = activity.checkerSignature 
             ? `<div style="margin-top: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center;">
                     <strong style="font-size: 12px; color: #666;">ลายเซ็นดิจิทัล:</strong><br>
@@ -2041,7 +2073,7 @@ function renderApprovalSection(activity) {
             </div>
         `;
     } else {
-        // ✅ แสดงลายเซ็นที่บันทึกไว้
+        // ✅ แสดงลายเซ็นผู้อนุมัติ
         const approverSigDisplay = activity.approverSignature 
             ? `<div style="margin-top: 10px; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center;">
                     <strong style="font-size: 12px; color: #666;">ลายเซ็นดิจิทัล:</strong><br>
@@ -2059,12 +2091,19 @@ function renderApprovalSection(activity) {
                 <p><strong>วันที่อนุมัติ:</strong> ${activity.approverDate}</p>
                 <p><strong>ความคิดเห็น:</strong> ${activity.approverComment || 'ไม่มี'}</p>
                 ${approverSigDisplay}
-                ${printButton}
             </div>
         `;
     }
 
-    return `<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">${checkerHtml}${approverHtml}</div>`;
+    // ✅ ตรวจสอบว่ามีลายเซ็นทั้งสองข้างหรือไม่
+    const hasAllData = activity.approver && activity.approverSignature && 
+                       activity.checker && activity.checkerSignature;
+    
+    return `<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                ${checkerHtml}
+                ${approverHtml}
+            </div>
+            ${hasAllData ? printButton : ''}`;
 }
 
 // ============================================
