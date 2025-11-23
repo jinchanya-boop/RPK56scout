@@ -2495,6 +2495,47 @@ function selectStudentLevel(level) {
         gradeSelect.value = '';
     }
 }
+    function selectStudentLevel(level) {
+    // 1. บันทึกค่าที่เลือก
+    document.getElementById('selectedStudentLevel').value = level;
+    
+    // 2. อัปเดต UI ของปุ่มให้มีการไฮไลต์
+    const primaryBtn = document.getElementById('levelBtn_primary');
+    const secondaryBtn = document.getElementById('levelBtn_secondary');
+    
+    if (level === 'primary') {
+        // ไฮไลต์ปุ่มประถมศึกษา
+        primaryBtn.style.border = '3px solid #667eea';
+        primaryBtn.style.boxShadow = '0 0 0 4px rgba(102, 126, 234, 0.2)';
+        
+        // ปกติปุ่มมัธยมศึกษา
+        secondaryBtn.style.border = '3px solid transparent';
+        secondaryBtn.style.boxShadow = 'none';
+    } else {
+        // ไฮไลต์ปุ่มมัธยมศึกษา
+        secondaryBtn.style.border = '3px solid #764ba2';
+        secondaryBtn.style.boxShadow = '0 0 0 4px rgba(118, 75, 162, 0.2)';
+        
+        // ปกติปุ่มประถมศึกษา
+        primaryBtn.style.border = '3px solid transparent';
+        primaryBtn.style.boxShadow = 'none';
+    }
+    
+    // 3. ซ่อนข้อเตือน
+    const warning = document.getElementById('levelWarning');
+    if (warning) {
+        warning.style.display = 'none';
+    }
+    
+    // 4. เปิดใช้งาน dropdown ชั้นเรียน
+    const gradeSelect = document.getElementById('studentGrade');
+    gradeSelect.disabled = false;
+    gradeSelect.style.opacity = '1';
+    gradeSelect.style.cursor = 'pointer';
+    
+    // 5. อัปเดต dropdown ให้แสดงชั้นเรียนที่เกี่ยวข้อง
+    updateGradeDisplay();
+}
     function openTeacherForm() {
         const content = `
             <form id="teacherFormNew" onsubmit="submitTeacherForm(event)">
