@@ -627,14 +627,6 @@
                     <h2 style="color: #1e3c72;">จัดการข้อมูลนักเรียน</h2>
                     <button class="btn btn-success" onclick="openStudentForm()">+ เพิ่มนักเรียน</button>
                 </div>
-                
-                <!-- 📚 ส่วนกรองตามระดับการศึกษา -->
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <button class="btn" id="filterBtn_all" style="background: #1e3c72; color: white;" onclick="filterStudentsByLevel('all')">📚 ทั้งหมด</button>
-                    <button class="btn" id="filterBtn_primary" style="background: #667eea; color: white;" onclick="filterStudentsByLevel('primary')">🟦 ประถมศึกษา</button>
-                    <button class="btn" id="filterBtn_secondary" style="background: #764ba2; color: white;" onclick="filterStudentsByLevel('secondary')">🟪 มัธยมศึกษา</button>
-                </div>
-                
                 <div class="data-list" id="studentList"></div>
             </div>
 
@@ -1242,113 +1234,22 @@ function createSubmissionCharts() {
     }
     
     function loadStudents() {
-        // 🔧 ตั้งค่า filter ให้เป็น all เมื่อโหลด
-        currentStudentFilter = 'all';
-        updateStudentFilterButtons();
-        renderStudentList();
-    }
-
-    // 🆕 ฟังก์ชันกรองนักเรียนตามระดับการศึกษา
-    let currentStudentFilter = 'all';
-
-    function getStudentLevel(grade) {
-        if (!grade) return 'unknown';
-        const gradeStr = grade.toString().toLowerCase();
-        
-        // ประถมศึกษา
-        if (gradeStr.includes('ป.1') || gradeStr.includes('ป.2') || 
-            gradeStr.includes('ป.3') || gradeStr.includes('ป.4') || 
-            gradeStr.includes('ป.5') || gradeStr.includes('ป.6')) {
-            return 'primary';
-        }
-        
-        // มัธยมศึกษา
-        if (gradeStr.includes('ม.1') || gradeStr.includes('ม.2') || 
-            gradeStr.includes('ม.3') || gradeStr.includes('ม.4') || 
-            gradeStr.includes('ม.5') || gradeStr.includes('ม.6')) {
-            return 'secondary';
-        }
-        
-        return 'unknown';
-    }
-
-    function filterStudentsByLevel(level) {
-        currentStudentFilter = level;
-        updateStudentFilterButtons();
-        renderStudentList();
-    }
-
-    function updateStudentFilterButtons() {
-        // อัปเดต active state ของปุ่ม
-        ['all', 'primary', 'secondary'].forEach(level => {
-            const btn = document.getElementById(`filterBtn_${level}`);
-            if (btn) {
-                if (currentStudentFilter === level) {
-                    btn.style.boxShadow = '0 4px 12px rgba(30, 60, 114, 0.4)';
-                    btn.style.transform = 'translateY(-2px)';
-                } else {
-                    btn.style.boxShadow = 'none';
-                    btn.style.transform = 'translateY(0)';
-                }
-            }
-        });
-    }
-
-    function renderStudentList() {
         const container = document.getElementById('studentList');
-        
         if(studentsData.length === 0) {
             container.innerHTML = '<p class="loading-placeholder">ยังไม่มีข้อมูลนักเรียน</p>';
             return;
         }
-
-        // 🔧 กรองข้อมูลตามระดับการศึกษา
-        let filteredStudents = studentsData;
-        
-        if (currentStudentFilter === 'primary') {
-            filteredStudents = studentsData.filter(s => getStudentLevel(s.grade) === 'primary');
-        } else if (currentStudentFilter === 'secondary') {
-            filteredStudents = studentsData.filter(s => getStudentLevel(s.grade) === 'secondary');
-        }
-
-        if (filteredStudents.length === 0) {
-            const levelText = currentStudentFilter === 'primary' ? 'ประถมศึกษา' : 
-                            currentStudentFilter === 'secondary' ? 'มัธยมศึกษา' : 'นักเรียน';
-            container.innerHTML = `<p class="loading-placeholder">ไม่พบข้อมูล${levelText}</p>`;
-            return;
-        }
-
-        // เรียงลำดับตามชั้นแล้วเลขที่
-        filteredStudents.sort((a, b) => {
-            const gradeCompare = a.grade.localeCompare(b.grade, 'th');
-            if (gradeCompare !== 0) return gradeCompare;
-            return parseInt(a.number) - parseInt(b.number);
-        });
-
-        container.innerHTML = filteredStudents.map((student, index) => {
-            const level = getStudentLevel(student.grade);
-            const levelBadge = level === 'primary' ? '🟦 ประถมศึกษา' : 
-                             level === 'secondary' ? '🟪 มัธยมศึกษา' : 'ระดับอื่น';
-            
-            return `
+        container.innerHTML = studentsData.map((student, index) => `
             <div class="data-item" style="cursor: default;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-                    <div style="flex: 1;">
-                        <h3 style="margin: 0 0 8px 0;">${student.name}</h3>
-                        <div class="data-meta">
-                            <span style="display: inline-block; padding: 4px 8px; background: ${level === 'primary' ? '#e0e7ff' : '#f0e7ff'}; border-radius: 12px; font-size: 12px; margin-right: 8px;">${levelBadge}</span>
-                            <span>🎓 ${student.grade}</span>
-                            <span>📋 เลขที่ ${student.number}</span>
-                        </div>
+                    <div>
+                        <h3>${index + 1}. ${student.name}</h3>
+                        <div class="data-meta"><span>🎓 ${student.grade}</span><span>📋 เลขที่ ${student.number}</span></div>
                     </div>
-                    <div style="flex-shrink: 0; display: flex; gap: 8px;">
-                        <button class="btn" style="padding: 8px 12px; font-size: 13px;" onclick="editStudent('${student.id}')">✏️ แก้ไข</button>
-                        <button class="btn btn-danger" style="padding: 8px 12px; font-size: 13px;" onclick="deleteStudent('${student.id}')">🗑️ ลบ</button>
-                    </div>
+                    <div style="flex-shrink: 0;"><button class="btn" onclick="editStudent('${student.id}')">แก้ไข</button> <button class="btn btn-danger" onclick="deleteStudent('${student.id}')">ลบ</button></div>
                 </div>
             </div>
-        `
-        }).join('');
+        `).join('');
     }
     
     function loadTeachers() {
@@ -2318,222 +2219,36 @@ function updateResponsibleSelection() {
 }
     
     function openStudentForm() {
-    const content = `
-        <form id="studentFormNew" onsubmit="submitStudentForm(event)">
-            <div class="form-group">
-                <label>ชื่อ-นามสกุล *</label>
-                <input type="text" id="studentName" required placeholder="เช่น เด็กชายสมชาย ใจดี">
-            </div>
-            
-            <div class="form-group">
-    <label style="margin-bottom: 12px; display: block; color: #333; font-weight: 600;">
-        📚 ระดับการศึกษา *
-    </label>
-    
-    <!-- ✨ ปุ่มเลือกระดับการศึกษา 2 ปุ่ม -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-        <!-- ปุ่มประถมศึกษา -->
-        <div 
-            id="levelBtn_primary" 
-            onclick="selectStudentLevel('primary')"
-            style="
-                background: #667eea;
-                color: white;
-                padding: 14px 16px;
-                border-radius: 8px;
-                border: 3px solid transparent;
-                cursor: pointer;
-                text-align: center;
-                font-weight: 600;
-                font-size: 15px;
-                user-select: none;
-                transition: all 0.3s ease;
-            "
-            onmouseover="this.style.opacity = '0.9'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 5px 15px rgba(102, 126, 234, 0.3)';"
-            onmouseout="this.style.opacity = '1'; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none';"
-        >
-            🟦 ประถมศึกษา
-        </div>
-        
-        <!-- ปุ่มมัธยมศึกษา -->
-        <div 
-            id="levelBtn_secondary" 
-            onclick="selectStudentLevel('secondary')"
-            style="
-                background: #764ba2;
-                color: white;
-                padding: 14px 16px;
-                border-radius: 8px;
-                border: 3px solid transparent;
-                cursor: pointer;
-                text-align: center;
-                font-weight: 600;
-                font-size: 15px;
-                user-select: none;
-                transition: all 0.3s ease;
-            "
-            onmouseover="this.style.opacity = '0.9'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 5px 15px rgba(118, 75, 162, 0.3)';"
-            onmouseout="this.style.opacity = '1'; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none';"
-        >
-            🟪 มัธยมศึกษา
-        </div>
-    </div>
-    
-    <!-- ✨ ข้อเตือนเมื่อยังไม่เลือก -->
-    <div id="levelWarning" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; border-radius: 5px; margin-bottom: 15px; font-size: 13px; color: #664d03; display: block;">
-        ⚠️ กรุณาเลือกระดับการศึกษาก่อน
-    </div>
-    
-    <!-- input hidden เก็บค่าที่เลือก -->
-    <input type="hidden" id="selectedStudentLevel" value="">
-</div>
+        const content = `
+            <form id="studentFormNew" onsubmit="submitStudentForm(event)">
+                <div class="form-group">
+                    <label>ชื่อ-นามสกุล *</label>
+                    <input type="text" id="studentName" required placeholder="เช่น เด็กชายสมชาย ใจดี">
+                </div>
+                <div class="form-group">
+                    <label>ระดับชั้น *</label>
+                    <select id="studentGrade" required>
+                        <option value="">-- เลือกระดับชั้น --</option>
+                        <option value="ป.1">ประถมศึกษาปีที่ 1</option><option value="ป.2">ประถมศึกษาปีที่ 2</option>
+                        <option value="ป.3/1">ประถมศึกษาปีที่ 3/1</option><option value="ป.3/2">ประถมศึกษาปีที่ 3/2</option>
+                        <option value="ป.4/1">ประถมศึกษาปีที่ 4/1</option><option value="ป.4/2">ประถมศึกษาปีที่ 4/2</option>
+                        <option value="ป.5/1">ประถมศึกษาปีที่ 5/1</option><option value="ป.5/2">ประถมศึกษาปีที่ 5/2</option>
+                        <option value="ป.6/1">ประถมศึกษาปีที่ 6/1</option><option value="ป.6/2">ประถมศึกษาปีที่ 6/2</option><option value="ป.6/3">ประถมศึกษาปีที่ 6/3</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>เลขที่ *</label>
+                    <input type="number" id="studentNumber" required placeholder="1-50" min="1" max="50">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-cancel" onclick="document.getElementById('studentFormModal').remove()">ยกเลิก</button>
+                    <button type="submit" class="btn-submit">เพิ่มนักเรียน</button>
+                </div>
+            </form>
+        `;
+        createModal('studentFormModal', 'เพิ่มข้อมูลนักเรียนใหม่', content, '600px');
+    }
 
-            <div class="form-group">
-    <label>ชั้นเรียน *</label>
-    <select id="studentGrade" required onchange="updateGradeDisplay()" disabled style="opacity: 0.5; cursor: not-allowed;">
-        <option value="">-- กรุณาเลือกระดับการศึกษาก่อน --</option>
-        <optgroup id="primaryGrades" label="ประถมศึกษา" style="display: none;">
-            <option value="ป.1">ประถมศึกษาปีที่ 1</option>
-            <option value="ป.2">ประถมศึกษาปีที่ 2</option>
-            <option value="ป.3/1">ประถมศึกษาปีที่ 3/1</option>
-            <option value="ป.3/2">ประถมศึกษาปีที่ 3/2</option>
-            <option value="ป.4/1">ประถมศึกษาปีที่ 4/1</option>
-            <option value="ป.4/2">ประถมศึกษาปีที่ 4/2</option>
-            <option value="ป.5/1">ประถมศึกษาปีที่ 5/1</option>
-            <option value="ป.5/2">ประถมศึกษาปีที่ 5/2</option>
-            <option value="ป.6/1">ประถมศึกษาปีที่ 6/1</option>
-            <option value="ป.6/2">ประถมศึกษาปีที่ 6/2</option>
-            <option value="ป.6/3">ประถมศึกษาปีที่ 6/3</option>
-        </optgroup>
-        <optgroup id="secondaryGrades" label="มัธยมศึกษา" style="display: none;">
-            <option value="ม.1">มัธยมศึกษาปีที่ 1</option>
-            <option value="ม.2">มัธยมศึกษาปีที่ 2</option>
-            <option value="ม.3">มัธยมศึกษาปีที่ 3</option>
-            <option value="ม.4">มัธยมศึกษาปีที่ 4</option>
-            <option value="ม.5">มัธยมศึกษาปีที่ 5</option>
-            <option value="ม.6">มัธยมศึกษาปีที่ 6</option>
-        </optgroup>
-    </select>
-</div>
-            
-            <div class="form-group">
-                <label>เลขที่ *</label>
-                <input type="number" id="studentNumber" required placeholder="1-50" min="1" max="50">
-            </div>
-            
-            <div class="form-actions">
-                <button type="button" class="btn-cancel" onclick="document.getElementById('studentFormModal').remove()">ยกเลิก</button>
-                <button type="submit" class="btn-submit">เพิ่มนักเรียน</button>
-            </div>
-        </form>
-    `;
-    createModal('studentFormModal', 'เพิ่มข้อมูลนักเรียนใหม่', content, '600px');
-    updateGradeDisplay();
-}
-    /**
- * ✨ ฟังก์ชันใหม่: เลือกระดับการศึกษา
- * @param {string} level - 'primary' หรือ 'secondary'
- */
-function selectStudentLevel(level) {
-    // 1. บันทึกค่าที่เลือก
-    document.getElementById('selectedStudentLevel').value = level;
-    
-    // 2. อัปเดต UI ของปุ่มให้มีการไฮไลต์
-    const primaryBtn = document.getElementById('levelBtn_primary');
-    const secondaryBtn = document.getElementById('levelBtn_secondary');
-    
-    if (level === 'primary') {
-        // ไฮไลต์ปุ่มประถมศึกษา
-        primaryBtn.style.border = '3px solid #667eea';
-        primaryBtn.style.boxShadow = '0 0 0 4px rgba(102, 126, 234, 0.2)';
-        
-        // ปกติปุ่มมัธยมศึกษา
-        secondaryBtn.style.border = '3px solid transparent';
-        secondaryBtn.style.boxShadow = 'none';
-    } else {
-        // ไฮไลต์ปุ่มมัธยมศึกษา
-        secondaryBtn.style.border = '3px solid #764ba2';
-        secondaryBtn.style.boxShadow = '0 0 0 4px rgba(118, 75, 162, 0.2)';
-        
-        // ปกติปุ่มประถมศึกษา
-        primaryBtn.style.border = '3px solid transparent';
-        primaryBtn.style.boxShadow = 'none';
-    }
-    
-    // 3. ซ่อนข้อเตือน
-    const warning = document.getElementById('levelWarning');
-    if (warning) {
-        warning.style.display = 'none';
-    }
-    
-    // 4. เปิดใช้งาน dropdown ชั้นเรียน
-    const gradeSelect = document.getElementById('studentGrade');
-    gradeSelect.disabled = false;
-    gradeSelect.style.opacity = '1';
-    gradeSelect.style.cursor = 'pointer';
-    
-    // 5. อัปเดต dropdown ให้แสดงชั้นเรียนที่เกี่ยวข้อง
-    updateGradeDisplay();
-}
-
-    function updateGradeDisplay() {
-    const selectedLevel = document.getElementById('selectedStudentLevel').value;
-    const primaryGrades = document.getElementById('primaryGrades');
-    const secondaryGrades = document.getElementById('secondaryGrades');
-    const gradeSelect = document.getElementById('studentGrade');
-    
-    // แสดง/ซ่อน optgroup ตามระดับที่เลือก
-    if (selectedLevel === 'primary') {
-        primaryGrades.style.display = 'block';
-        secondaryGrades.style.display = 'none';
-        gradeSelect.value = '';
-    } else if (selectedLevel === 'secondary') {
-        primaryGrades.style.display = 'none';
-        secondaryGrades.style.display = 'block';
-        gradeSelect.value = '';
-    }
-}
-   function selectStudentLevel(level) {
-    // 1. บันทึกค่าที่เลือก
-    document.getElementById('selectedStudentLevel').value = level;
-    
-    // 2. อัปเดต UI ของปุ่มให้มีการไฮไลต์
-    const primaryBtn = document.getElementById('levelBtn_primary');
-    const secondaryBtn = document.getElementById('levelBtn_secondary');
-    
-    if (level === 'primary') {
-        // ไฮไลต์ปุ่มประถมศึกษา
-        primaryBtn.style.border = '3px solid #667eea';
-        primaryBtn.style.boxShadow = '0 0 0 4px rgba(102, 126, 234, 0.2)';
-        
-        // ปกติปุ่มมัธยมศึกษา
-        secondaryBtn.style.border = '3px solid transparent';
-        secondaryBtn.style.boxShadow = 'none';
-    } else {
-        // ไฮไลต์ปุ่มมัธยมศึกษา
-        secondaryBtn.style.border = '3px solid #764ba2';
-        secondaryBtn.style.boxShadow = '0 0 0 4px rgba(118, 75, 162, 0.2)';
-        
-        // ปกติปุ่มประถมศึกษา
-        primaryBtn.style.border = '3px solid transparent';
-        primaryBtn.style.boxShadow = 'none';
-    }
-    
-    // 3. ซ่อนข้อเตือน
-    const warning = document.getElementById('levelWarning');
-    if (warning) {
-        warning.style.display = 'none';
-    }
-    
-    // 4. เปิดใช้งาน dropdown ชั้นเรียน
-    const gradeSelect = document.getElementById('studentGrade');
-    gradeSelect.disabled = false;
-    gradeSelect.style.opacity = '1';
-    gradeSelect.style.cursor = 'pointer';
-    
-    // 5. อัปเดต dropdown ให้แสดงชั้นเรียนที่เกี่ยวข้อง
-    updateGradeDisplay();
-}
     function openTeacherForm() {
         const content = `
             <form id="teacherFormNew" onsubmit="submitTeacherForm(event)">
@@ -2745,44 +2460,32 @@ async function submitActivityForm(event) {
     }
 }
     async function submitStudentForm(event) {
-    event.preventDefault();
+        event.preventDefault();
+        const studentData = {
+            name: document.getElementById('studentName').value.trim(),
+            grade: document.getElementById('studentGrade').value,
+            number: document.getElementById('studentNumber').value
+        };
+        if (!studentData.name || !studentData.grade || !studentData.number) {
+            alert('กรุณากรอกข้อมูลให้ครบถ้วน');
+            return;
+        }
+        const success = await postData('addStudent', { id: 'STU_' + Date.now(), ...studentData }, 'เพิ่มนักเรียนสำเร็จ');
+if (success) {
+    document.getElementById('studentFormModal').remove();
     
-    // ✨ ตรวจสอบว่าเลือกระดับการศึกษาแล้ว
-    const selectedLevel = document.getElementById('selectedStudentLevel').value;
-    if (!selectedLevel) {
-        alert('❌ กรุณาเลือกระดับการศึกษาก่อน');
-        return;
-    }
+    // ✅ Clear cache
+    lastDataLoad = null;
     
-    const studentData = {
-        name: document.getElementById('studentName').value.trim(),
-        grade: document.getElementById('studentGrade').value,
-        number: document.getElementById('studentNumber').value
-    };
+    // ✅ Clear data
+    studentsData = [];
+    activitiesData = [];
+    teachersData = [];
     
-    if (!studentData.name || !studentData.grade || !studentData.number) {
-        alert('❌ กรุณากรอกข้อมูลให้ครบถ้วน');
-        return;
-    }
-    
-    const success = await postData('addStudent', { id: 'STU_' + Date.now(), ...studentData }, 'เพิ่มนักเรียนสำเร็จ');
-    
-    if (success) {
-        document.getElementById('studentFormModal').remove();
-        
-        // ✅ Clear cache
-        lastDataLoad = null;
-        currentStudentFilter = 'all';  // ✅ รีเซ็ต filter
-        
-        // ✅ Clear data
-        studentsData = [];
-        activitiesData = [];
-        teachersData = [];
-        
-        // ✅ Reload หน้า
-        setTimeout(() => {
-            location.reload();
-        }, 1500);
+    // ✅ Reload หน้า
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
     }
 }
 
