@@ -2325,69 +2325,68 @@ function updateResponsibleSelection() {
                 <input type="text" id="studentName" required placeholder="เช่น เด็กชายสมชาย ใจดี">
             </div>
             
-            <!-- 📚 ส่วนเลือกระดับการศึกษา - ปรับปรุงใหม่ -->
             <div class="form-group">
-                <label style="margin-bottom: 12px; display: block; color: #333; font-weight: 600;">
-                    📚 ระดับการศึกษา *
-                </label>
-                
-                <!-- ✨ ปุ่มเลือกระดับการศึกษา 2 ปุ่ม -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                    <!-- ปุ่มประถมศึกษา -->
-                    <div 
-                        id="levelBtn_primary" 
-                        onclick="selectStudentLevel('primary')"
-                        style="
-                            background: #667eea;
-                            color: white;
-                            padding: 14px 16px;
-                            border-radius: 8px;
-                            border: 3px solid transparent;
-                            cursor: pointer;
-                            text-align: center;
-                            font-weight: 600;
-                            font-size: 15px;
-                            user-select: none;
-                            transition: all 0.3s ease;
-                        "
-                        onmouseover="this.style.opacity = '0.9'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 5px 15px rgba(102, 126, 234, 0.3)';"
-                        onmouseout="this.style.opacity = '1'; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none';"
-                    >
-                        🟦 ประถมศึกษา
-                    </div>
-                    
-                    <!-- ปุ่มมัธยมศึกษา -->
-                    <div 
-                        id="levelBtn_secondary" 
-                        onclick="selectStudentLevel('secondary')"
-                        style="
-                            background: #764ba2;
-                            color: white;
-                            padding: 14px 16px;
-                            border-radius: 8px;
-                            border: 3px solid transparent;
-                            cursor: pointer;
-                            text-align: center;
-                            font-weight: 600;
-                            font-size: 15px;
-                            user-select: none;
-                            transition: all 0.3s ease;
-                        "
-                        onmouseover="this.style.opacity = '0.9'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 5px 15px rgba(118, 75, 162, 0.3)';"
-                        onmouseout="this.style.opacity = '1'; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none';"
-                    >
-                        🟪 มัธยมศึกษา
-                    </div>
-                </div>
-                
-                <!-- ✨ ข้อเตือนเมื่อยังไม่เลือก -->
-                <div id="levelWarning" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; border-radius: 5px; margin-bottom: 15px; font-size: 13px; color: #664d03; display: block;">
-                    ⚠️ กรุณาเลือกระดับการศึกษาก่อน
-                </div>
-                
-                <!-- input hidden เก็บค่าที่เลือก -->
-                <input type="hidden" id="selectedStudentLevel" value="">
-            </div>
+    <label style="margin-bottom: 12px; display: block; color: #333; font-weight: 600;">
+        📚 ระดับการศึกษา *
+    </label>
+    
+    <!-- ✨ ปุ่มเลือกระดับการศึกษา 2 ปุ่ม -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+        <!-- ปุ่มประถมศึกษา -->
+        <div 
+            id="levelBtn_primary" 
+            onclick="selectStudentLevel('primary')"
+            style="
+                background: #667eea;
+                color: white;
+                padding: 14px 16px;
+                border-radius: 8px;
+                border: 3px solid transparent;
+                cursor: pointer;
+                text-align: center;
+                font-weight: 600;
+                font-size: 15px;
+                user-select: none;
+                transition: all 0.3s ease;
+            "
+            onmouseover="this.style.opacity = '0.9'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 5px 15px rgba(102, 126, 234, 0.3)';"
+            onmouseout="this.style.opacity = '1'; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none';"
+        >
+            🟦 ประถมศึกษา
+        </div>
+        
+        <!-- ปุ่มมัธยมศึกษา -->
+        <div 
+            id="levelBtn_secondary" 
+            onclick="selectStudentLevel('secondary')"
+            style="
+                background: #764ba2;
+                color: white;
+                padding: 14px 16px;
+                border-radius: 8px;
+                border: 3px solid transparent;
+                cursor: pointer;
+                text-align: center;
+                font-weight: 600;
+                font-size: 15px;
+                user-select: none;
+                transition: all 0.3s ease;
+            "
+            onmouseover="this.style.opacity = '0.9'; this.style.transform = 'translateY(-2px)'; this.style.boxShadow = '0 5px 15px rgba(118, 75, 162, 0.3)';"
+            onmouseout="this.style.opacity = '1'; this.style.transform = 'translateY(0)'; this.style.boxShadow = 'none';"
+        >
+            🟪 มัธยมศึกษา
+        </div>
+    </div>
+    
+    <!-- ✨ ข้อเตือนเมื่อยังไม่เลือก -->
+    <div id="levelWarning" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; border-radius: 5px; margin-bottom: 15px; font-size: 13px; color: #664d03; display: block;">
+        ⚠️ กรุณาเลือกระดับการศึกษาก่อน
+    </div>
+    
+    <!-- input hidden เก็บค่าที่เลือก -->
+    <input type="hidden" id="selectedStudentLevel" value="">
+</div>
 
             <!-- ✨ Dropdown ชั้นเรียนที่ปรับปรุง -->
             <div class="form-group">
@@ -2495,7 +2494,7 @@ function selectStudentLevel(level) {
         gradeSelect.value = '';
     }
 }
-    function selectStudentLevel(level) {
+   function selectStudentLevel(level) {
     // 1. บันทึกค่าที่เลือก
     document.getElementById('selectedStudentLevel').value = level;
     
