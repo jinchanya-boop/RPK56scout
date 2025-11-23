@@ -623,12 +623,26 @@
             </div>
             
             <div id="students" class="tab-content">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="color: #1e3c72;">จัดการข้อมูลนักเรียน</h2>
-                    <button class="btn btn-success" onclick="openStudentForm()">+ เพิ่มนักเรียน</button>
-                </div>
-                <div class="data-list" id="studentList"></div>
-            </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="color: #1e3c72;">จัดการข้อมูลนักเรียน</h2>
+        <button class="btn btn-success" onclick="openStudentForm()">+ เพิ่มนักเรียน</button>
+    </div>
+    
+    <!-- ✅ ตัวกรองระดับการศึกษา -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+        <button class="btn" id="filterAllStudents" onclick="filterStudents('all')" style="background: #1e3c72; color: white; padding: 10px 20px; border-radius: 25px; border: 2px solid #1e3c72; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+            📋 ทั้งหมด <span id="countAll" style="background: rgba(255,255,255,0.3); padding: 2px 8px; border-radius: 12px; margin-left: 5px; font-size: 12px;">0</span>
+        </button>
+        <button class="btn" id="filterElementary" onclick="filterStudents('elementary')" style="background: white; color: #1e3c72; padding: 10px 20px; border-radius: 25px; border: 2px solid #1e3c72; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+            🎓 ประถมศึกษา <span id="countElem" style="background: #1e3c72; color: white; padding: 2px 8px; border-radius: 12px; margin-left: 5px; font-size: 12px;">0</span>
+        </button>
+        <button class="btn" id="filterSecondary" onclick="filterStudents('secondary')" style="background: white; color: #1e3c72; padding: 10px 20px; border-radius: 25px; border: 2px solid #1e3c72; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+            📚 มัธยมศึกษา <span id="countSecond" style="background: #1e3c72; color: white; padding: 2px 8px; border-radius: 12px; margin-left: 5px; font-size: 12px;">0</span>
+        </button>
+    </div>
+    
+    <div class="data-list" id="studentList"></div>
+</div>
 
             <div id="teachers" class="tab-content">
                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -692,6 +706,7 @@
     const API_URL = 'https://script.google.com/macros/s/AKfycbw83ygWiQHxyNnb6kOjnG1gwtnSubyYAOULK4Myq9JLF8AT8LiOcu1iyfTtOEPvuWx71g/exec';
     let studentsData = [];
     let activitiesData = [];
+    let currentStudentFilter = 'all';  // ← เพิ่มบรรทัดใหม่นี้
     let teachersData = [
         { id: 'TCH_1', name: 'นางประทุม  มหาวงศ์นันท์' },
         { id: 'TCH_2', name: 'นางสาวภัทราภรณ์  ศรีวิไชย' },
@@ -718,7 +733,7 @@
         { id: 'TCH_23', name: 'นายสมบูรณ์  ใยดี' },
         { id: 'TCH_24', name: 'นางจีรวรรณ จีนะ' }
     ];
-
+    
     // ========================================
     // Global Utility Functions
     // ========================================
@@ -1234,23 +1249,119 @@ function createSubmissionCharts() {
     }
     
     function loadStudents() {
-        const container = document.getElementById('studentList');
-        if(studentsData.length === 0) {
-            container.innerHTML = '<p class="loading-placeholder">ยังไม่มีข้อมูลนักเรียน</p>';
-            return;
-        }
-        container.innerHTML = studentsData.map((student, index) => `
-            <div class="data-item" style="cursor: default;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
-                    <div>
-                        <h3>${index + 1}. ${student.name}</h3>
-                        <div class="data-meta"><span>🎓 ${student.grade}</span><span>📋 เลขที่ ${student.number}</span></div>
-                    </div>
-                    <div style="flex-shrink: 0;"><button class="btn" onclick="editStudent('${student.id}')">แก้ไข</button> <button class="btn btn-danger" onclick="deleteStudent('${student.id}')">ลบ</button></div>
-                </div>
-            </div>
-        `).join('');
+    const container = document.getElementById('studentList');
+    if(studentsData.length === 0) {
+        container.innerHTML = '<p class="loading-placeholder">ยังไม่มีข้อมูลนักเรียน</p>';
+        updateStudentCounts();
+        return;
     }
+    
+    // ✅ กรองตามประเภทการศึกษา
+    const filteredStudents = filterStudentsByEducationType(studentsData, currentStudentFilter);
+    
+    // อัปเดตจำนวนนักเรียน
+    updateStudentCounts();
+    
+    if(filteredStudents.length === 0) {
+        container.innerHTML = '<p class="loading-placeholder">ไม่มีข้อมูลนักเรียนในประเภทนี้</p>';
+        return;
+    }
+    
+    container.innerHTML = filteredStudents.map((student, index) => `
+        <div class="data-item" style="cursor: default;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                <div>
+                    <h3>${index + 1}. ${student.name}</h3>
+                    <div class="data-meta">
+                        <span>🎓 ${student.grade}</span>
+                        <span>📋 เลขที่ ${student.number}</span>
+                        <span style="background: ${getEducationTypeColor(student.grade)}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px;">
+                            ${getEducationTypeLabel(student.grade)}
+                        </span>
+                    </div>
+                </div>
+                <div style="flex-shrink: 0;"><button class="btn" onclick="editStudent('${student.id}')">แก้ไข</button> <button class="btn btn-danger" onclick="deleteStudent('${student.id}')">ลบ</button></div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ✅ ฟังก์ชันกรองนักเรียนตามประเภทการศึกษา
+function filterStudentsByEducationType(students, filterType) {
+    if (filterType === 'all') {
+        return students;
+    } else if (filterType === 'elementary') {
+        // ประถมศึกษา: ป.1 - ป.6
+        return students.filter(s => {
+            const grade = s.grade.replace('/1', '').replace('/2', '').replace('/3', '');
+            return grade.startsWith('ป.');
+        });
+    } else if (filterType === 'secondary') {
+        // มัธยมศึกษา: ม.1 - ม.6
+        return students.filter(s => {
+            const grade = s.grade.replace('/1', '').replace('/2', '');
+            return grade.startsWith('ม.');
+        });
+    }
+    return students;
+}
+
+// ✅ ฟังก์ชันเลือกตัวกรอง
+function filterStudents(filterType) {
+    currentStudentFilter = filterType;
+    
+    // อัปเดตสไตล์ปุ่ม
+    document.getElementById('filterAllStudents').style.background = filterType === 'all' ? '#1e3c72' : 'white';
+    document.getElementById('filterAllStudents').style.color = filterType === 'all' ? 'white' : '#1e3c72';
+    
+    document.getElementById('filterElementary').style.background = filterType === 'elementary' ? '#1e3c72' : 'white';
+    document.getElementById('filterElementary').style.color = filterType === 'elementary' ? 'white' : '#1e3c72';
+    
+    document.getElementById('filterSecondary').style.background = filterType === 'secondary' ? '#1e3c72' : 'white';
+    document.getElementById('filterSecondary').style.color = filterType === 'secondary' ? 'white' : '#1e3c72';
+    
+    // โหลดข้อมูลที่กรองแล้ว
+    loadStudents();
+}
+
+// ✅ ฟังก์ชันอัปเดตจำนวนนักเรียน
+function updateStudentCounts() {
+    const total = studentsData.length;
+    const elementary = studentsData.filter(s => {
+        const grade = s.grade.replace('/1', '').replace('/2', '').replace('/3', '');
+        return grade.startsWith('ป.');
+    }).length;
+    const secondary = studentsData.filter(s => {
+        const grade = s.grade.replace('/1', '').replace('/2', '');
+        return grade.startsWith('ม.');
+    }).length;
+    
+    document.getElementById('countAll').textContent = total;
+    document.getElementById('countElem').textContent = elementary;
+    document.getElementById('countSecond').textContent = secondary;
+}
+
+// ✅ ฟังก์ชันช่วยในการแสดงสีตามประเภทการศึกษา
+function getEducationTypeColor(grade) {
+    const gradeClean = grade.replace('/1', '').replace('/2', '').replace('/3', '');
+    if (gradeClean.startsWith('ป.')) {
+        return '#1e3c72'; // สีน้ำเงินเข้มสำหรับประถม
+    } else if (gradeClean.startsWith('ม.')) {
+        return '#28a745'; // สีเขียวสำหรับมัธยม
+    }
+    return '#999';
+}
+
+// ✅ ฟังก์ชันช่วยในการแสดงชื่อประเภท
+function getEducationTypeLabel(grade) {
+    const gradeClean = grade.replace('/1', '').replace('/2', '').replace('/3', '');
+    if (gradeClean.startsWith('ป.')) {
+        return 'ประถมศึกษา';
+    } else if (gradeClean.startsWith('ม.')) {
+        return 'มัธยมศึกษา';
+    }
+    return 'ไม่ระบุ';
+}
     
     function loadTeachers() {
         const container = document.getElementById('teacherList');
@@ -2473,7 +2584,8 @@ async function submitActivityForm(event) {
         const success = await postData('addStudent', { id: 'STU_' + Date.now(), ...studentData }, 'เพิ่มนักเรียนสำเร็จ');
 if (success) {
     document.getElementById('studentFormModal').remove();
-    
+     // ✅ เพิ่มบรรทัดนี้:
+    currentStudentFilter = 'all';
     // ✅ Clear cache
     lastDataLoad = null;
     
