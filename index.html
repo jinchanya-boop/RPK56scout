@@ -2765,37 +2765,66 @@ async function submitEditStudent(event, id) {
 }
     async function editTeacher(id) {
     const teacher = teachersData.find(t => t.id === id);
-    if (!teacher) {
-        return alert('ไม่พบข้อมูลผู้กำกับ');
+    if (!teacher) return alert('ไม่พบข้อมูลผู้กำกับ');
+
+    const content = `
+        <form id="editTeacherForm" onsubmit="submitEditTeacher(event, '${id}')">
+            <div class="form-group">
+                <label>ชื่อ-นามสกุล *</label>
+                <input type="text" id="editTeacherName" required value="${teacher.name}">
+            </div>
+            <div class="form-group">
+                <label>อีเมล</label>
+                <input type="email" id="editTeacherEmail" value="${teacher.email || ''}">
+            </div>
+            <div class="form-group">
+                <label>เบอร์โทร</label>
+                <input type="tel" id="editTeacherPhone" value="${teacher.phone || ''}">
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('editTeacherModal').remove()">ยกเลิก</button>
+                <button type="submit" class="btn-submit">บันทึกการแก้ไข</button>
+            </div>
+        </form>
+    `;
+    createModal('editTeacherModal', 'แก้ไขข้อมูลผู้กำกับ', content, '600px');
+}
+
+async function submitEditTeacher(event, id) {
+    event.preventDefault();
+    const name = document.getElementById('editTeacherName').value.trim();
+    const email = document.getElementById('editTeacherEmail').value.trim();
+    const phone = document.getElementById('editTeacherPhone').value.trim();
+
+    if (!name) {
+        alert('กรุณากรอกชื่อ-นามสกุล');
+        return;
     }
 
-    const name = prompt('แก้ไขชื่อ-นามสกุล:', teacher.name);
-    if (name === null) return;
+    // ✅ เปลี่ยนปุ่มเป็น loading
+    const submitBtn = event.target.querySelector('.btn-submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ กำลังบันทึก...';
+    submitBtn.style.opacity = '0.7';
 
-    const email = prompt('แก้ไขอีเมล:', teacher.email || '');
-    if (email === null) return;
+    const success = await postData('updateTeacher', { id, name, email, phone }, 'แก้ไขข้อมูลผู้กำกับสำเร็จ');
+    if (success) {
+        // ✅ เปลี่ยนปุ่มเป็น success
+        submitBtn.textContent = '✅ บันทึกสำเร็จ!';
+        submitBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+        submitBtn.style.opacity = '1';
 
-    const phone = prompt('แก้ไขเบอร์โทร:', teacher.phone || '');
-    if (phone === null) return;
-
-    if (name.trim()) {
-        const success = await postData('updateTeacher', { id, name, email, phone }, 'แก้ไขข้อมูลผู้กำกับสำเร็จ');
-        if (success) {
-            // ✅ Clear cache
-            lastDataLoad = null;
-
-            // ✅ Clear data
-            studentsData = [];
-            activitiesData = [];
-            teachersData = [];
-
-            // ✅ Reload หน้า
-            setTimeout(() => {
-                location.reload();
-            }, 1500);
-        }
+        document.getElementById('editTeacherModal').remove();
+        lastDataLoad = null;
+        studentsData = [];
+        activitiesData = [];
+        teachersData = [];
+        setTimeout(() => location.reload(), 1500);
     } else {
-        alert('กรุณากรอกชื่อ-นามสกุล');
+        // ✅ คืนค่าปุ่มถ้าล้มเหลว
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'บันทึกการแก้ไข';
+        submitBtn.style.opacity = '1';
     }
 }
 
