@@ -6,6 +6,7 @@
     <title>ระบบบันทึกกิจกรรมลูกเสือ - โรงเรียนราชประชานุเคราะห์ 56 จังหวัดน่าน</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         /* ======================================== */
         /* Global Styles & Resets
@@ -625,6 +626,7 @@
             <div id="students" class="tab-content">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h2 style="color: #1e3c72;">จัดการข้อมูลนักเรียน</h2>
+        <button class="btn btn-primary" onclick="openImportStudentModal()" style="background: #ff9800; border: none; margin-right: 10px;">📄 นำเข้าจาก Excel</button>
         <button class="btn btn-success" onclick="openStudentForm()">+ เพิ่มนักเรียน</button>
     </div>
     
@@ -647,6 +649,7 @@
             <div id="teachers" class="tab-content">
                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2 style="color: #1e3c72;">จัดการข้อมูลผู้กำกับ</h2>
+                    <button class="btn btn-primary" onclick="openImportTeacherModal()" style="background: #ff9800; border: none; margin-right: 10px;">📄 นำเข้าจาก Excel</button>
                     <button class="btn btn-success" onclick="openTeacherForm()">+ เพิ่มผู้กำกับ</button>
                 </div>
                 <div class="data-list" id="teacherList"></div>
@@ -1257,7 +1260,24 @@ function createSubmissionCharts() {
     }
     
     // ✅ กรองตามประเภทการศึกษา
-    const filteredStudents = filterStudentsByEducationType(studentsData, currentStudentFilter);
+    let filteredStudents = filterStudentsByEducationType(studentsData, currentStudentFilter);
+    
+    // ✅ เรียงลำดับนักเรียน
+    const gradeOrder = {
+        'ป.1': 1, 'ป.2': 2, 'ป.3/1': 3, 'ป.3/2': 4, 'ป.4/1': 5, 'ป.4/2': 6, 'ป.5/1': 7, 'ป.5/2': 8, 'ป.6/1': 9, 'ป.6/2': 10, 'ป.6/3': 11,
+        'ม.1/1': 12, 'ม.1/2': 13, 'ม.1/3': 14, 'ม.1/4': 15, 'ม.1/5': 16,
+        'ม.2/1': 17, 'ม.2/2': 18, 'ม.2/3': 19, 'ม.2/4': 20, 'ม.2/5': 21,
+        'ม.3/1': 22, 'ม.3/2': 23, 'ม.3/3': 24, 'ม.3/4': 25, 'ม.3/5': 26
+    };
+    
+    filteredStudents.sort((a, b) => {
+        let gA = gradeOrder[a.grade] || 99;
+        let gB = gradeOrder[b.grade] || 99;
+        if (gA !== gB) return gA - gB;
+        let nA = parseInt(a.number) || 0;
+        let nB = parseInt(b.number) || 0;
+        return nA - nB;
+    });
     
     // อัปเดตจำนวนนักเรียน
     updateStudentCounts();
@@ -3667,6 +3687,144 @@ function saveSignature(activityId, userType) {
         console.error('Error loading initial data:', error);
         alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
     }
+}
+function openImportStudentModal() {
+    const content = `
+        <div style="text-align: center; padding: 20px;">
+            <p style="margin-bottom: 20px; color: #666; font-size: 14px;">
+                กรุณาอัปโหลดไฟล์ Excel (.xlsx) ที่มีหัวคอลัมน์ในบรรทัดแรกดังนี้:<br>
+                <strong style="color: #333;">ชื่อ-สกุล | ระดับชั้น | เลขที่</strong><br>
+                <span style="font-size: 12px;">(ตัวอย่าง ระดับชั้น: ป.1, ม.2/1)</span>
+            </p>
+            <input type="file" id="studentExcelFile" accept=".xlsx, .xls" style="display: block; margin: 0 auto 20px; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('importStudentModal').remove()">ยกเลิก</button>
+                <button type="button" class="btn-submit" onclick="handleStudentExcelImport(event)">นำเข้าข้อมูล</button>
+            </div>
+        </div>
+    `;
+    createModal('importStudentModal', 'นำเข้าข้อมูลนักเรียนจาก Excel', content, '500px');
+}
+
+async function handleStudentExcelImport(event) {
+    const fileInput = document.getElementById('studentExcelFile');
+    const file = fileInput.files[0];
+    if (!file) return alert('กรุณาเลือกไฟล์ Excel');
+
+    const submitBtn = event.target;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ กำลังนำเข้า...';
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+            
+            // ข้าม Header
+            const rows = json.slice(1).filter(row => row.length > 0 && row[0]);
+            
+            const students = rows.map(row => ({
+                name: String(row[0] || '').trim(),
+                grade: String(row[1] || '').trim(),
+                number: String(row[2] || '').trim()
+            })).filter(s => s.name && s.grade && s.number);
+
+            if (students.length === 0) {
+                alert('ไม่พบข้อมูล หรือข้อมูลไม่ครบถ้วน กรุณาตรวจสอบคอลัมน์ใน Excel');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'นำเข้าข้อมูล';
+                return;
+            }
+
+            const success = await postData('importStudents', { students }, `นำเข้าข้อมูลนักเรียนสำเร็จ ${students.length} คน`);
+            if (success) {
+                document.getElementById('importStudentModal').remove();
+                lastDataLoad = null;
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'นำเข้าข้อมูล';
+            }
+        } catch (error) {
+            alert('เกิดข้อผิดพลาดในการอ่านไฟล์: ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'นำเข้าข้อมูล';
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function openImportTeacherModal() {
+    const content = `
+        <div style="text-align: center; padding: 20px;">
+            <p style="margin-bottom: 20px; color: #666; font-size: 14px;">
+                กรุณาอัปโหลดไฟล์ Excel (.xlsx) ที่มีหัวคอลัมน์ในบรรทัดแรกดังนี้:<br>
+                <strong style="color: #333;">ชื่อ-สกุล | อีเมล | เบอร์โทร</strong>
+            </p>
+            <input type="file" id="teacherExcelFile" accept=".xlsx, .xls" style="display: block; margin: 0 auto 20px; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('importTeacherModal').remove()">ยกเลิก</button>
+                <button type="button" class="btn-submit" onclick="handleTeacherExcelImport(event)">นำเข้าข้อมูล</button>
+            </div>
+        </div>
+    `;
+    createModal('importTeacherModal', 'นำเข้าข้อมูลผู้กำกับจาก Excel', content, '500px');
+}
+
+async function handleTeacherExcelImport(event) {
+    const fileInput = document.getElementById('teacherExcelFile');
+    const file = fileInput.files[0];
+    if (!file) return alert('กรุณาเลือกไฟล์ Excel');
+
+    const submitBtn = event.target;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ กำลังนำเข้า...';
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+            
+            // ข้าม Header
+            const rows = json.slice(1).filter(row => row.length > 0 && row[0]);
+            
+            const teachers = rows.map(row => ({
+                name: String(row[0] || '').trim(),
+                email: String(row[1] || '').trim(),
+                phone: String(row[2] || '').trim()
+            })).filter(t => t.name);
+
+            if (teachers.length === 0) {
+                alert('ไม่พบข้อมูล หรือข้อมูลไม่ครบถ้วน กรุณาตรวจสอบคอลัมน์ใน Excel');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'นำเข้าข้อมูล';
+                return;
+            }
+
+            const success = await postData('importTeachers', { teachers }, `นำเข้าข้อมูลผู้กำกับสำเร็จ ${teachers.length} ท่าน`);
+            if (success) {
+                document.getElementById('importTeacherModal').remove();
+                lastDataLoad = null;
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'นำเข้าข้อมูล';
+            }
+        } catch (error) {
+            alert('เกิดข้อผิดพลาดในการอ่านไฟล์: ' + error.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'นำเข้าข้อมูล';
+        }
+    };
+    reader.readAsArrayBuffer(file);
 }
 </script>
     
