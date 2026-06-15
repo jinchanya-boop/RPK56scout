@@ -643,6 +643,11 @@
         </button>
     </div>
     
+    <!-- ✅ ช่องค้นหานักเรียน -->
+    <div style="margin-bottom: 20px;">
+        <input type="text" id="studentSearchInput" placeholder="🔍 ค้นหาชื่อ หรือ ห้อง (เช่น ม.2/1)..." onkeyup="loadStudents()" style="width: 100%; max-width: 400px; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; font-family: 'Sarabun', sans-serif;">
+    </div>
+    
     <div class="data-list" id="studentList"></div>
 </div>
 
@@ -1261,6 +1266,19 @@ function createSubmissionCharts() {
     
     // ✅ กรองตามประเภทการศึกษา
     let filteredStudents = filterStudentsByEducationType(studentsData, currentStudentFilter);
+    
+    // ✅ กรองตามคำค้นหา (Search)
+    const searchInputElem = document.getElementById('studentSearchInput');
+    if (searchInputElem) {
+        const searchQuery = searchInputElem.value.trim().toLowerCase();
+        if (searchQuery) {
+            filteredStudents = filteredStudents.filter(s => {
+                const gradeText = s.grade ? s.grade.toLowerCase() : '';
+                const nameText = s.name ? s.name.toLowerCase() : '';
+                return nameText.includes(searchQuery) || gradeText.includes(searchQuery);
+            });
+        }
+    }
     
     // ✅ เรียงลำดับนักเรียน
     const gradeOrder = {
