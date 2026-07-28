@@ -763,6 +763,16 @@
     // ========================================
     // Global Utility Functions
     // ========================================
+    function getDriveThumbnailUrl(imgSrc) {
+        if (imgSrc && imgSrc.includes('drive.google.com/uc')) {
+            const idMatch = imgSrc.match(/id=([^&]+)/);
+            if (idMatch && idMatch[1]) {
+                return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w800`;
+            }
+        }
+        return imgSrc;
+    }
+
     function getStudentsByGrade(grade) {
         if (!grade) return '<tr><td colspan="3" class="loading-placeholder">กรุณาเลือกระดับชั้นเพื่อแสดงรายชื่อ</td></tr>';
         
@@ -1663,7 +1673,7 @@ function displayPendingChecks() {
                     </div>
                     ${activity.images && activity.images.length > 0 ? `
                         <div style="width: 100px; margin-left: 15px;">
-                            <img src="${activity.images[0]}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
+                            <img src="${getDriveThumbnailUrl(activity.images[0])}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
                         </div>
                     ` : ''}
                 </div>
@@ -1713,7 +1723,7 @@ function displayPendingChecks() {
                     </div>
                     ${activity.images && activity.images.length > 0 ? `
                         <div style="width: 100px; margin-left: 15px;">
-                            <img src="${activity.images[0]}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
+                            <img src="${getDriveThumbnailUrl(activity.images[0])}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
                         </div>
                     ` : ''}
                 </div>
