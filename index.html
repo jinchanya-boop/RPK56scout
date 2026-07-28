@@ -1849,7 +1849,7 @@ function showSignatureModal(activity, userType) {
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px;">
                         ${activity.images.map((img, idx) => `
                             <div style="position: relative; overflow: hidden; border-radius: 8px; border: 2px solid #f57c00;">
-                                <img src="${img}" style="width: 100%; height: 120px; object-fit: cover; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="รูปที่ ${idx + 1}">
+                                <img src="${getDriveThumbnailUrl(img)}" style="width: 100%; height: 120px; object-fit: cover; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="รูปที่ ${idx + 1}">
                             </div>
                         `).join('')}
                     </div>
