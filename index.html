@@ -3911,14 +3911,16 @@ function saveSignature(activityId, userType) {
             activityId,
             checker: activity.checker,
             checkerDate: activity.checkerDate,
-            checkerComment: comment
+            checkerComment: comment,
+            checkerSignature: signatureImage
           }
         : {
             activityId,
             approver: activity.approver,
             approverDate: activity.approverDate,
             approvalStatus: activity.approvalStatus,
-            approverComment: comment
+            approverComment: comment,
+            approverSignature: signatureImage
           };
     
     postData(action, data, 'ลายเซ็นบันทึกสำเร็จ').then(success => {
