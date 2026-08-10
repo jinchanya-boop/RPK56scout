@@ -1291,7 +1291,10 @@ function createSubmissionCharts() {
             container.innerHTML = '<p class="loading-placeholder">ยังไม่มีกิจกรรมที่บันทึกไว้</p>';
             return;
         }
-        container.innerHTML = activitiesData.slice().reverse().map(activity => `
+        container.innerHTML = activitiesData.slice().reverse().map(activity => {
+            const hasAllData = activity.approver && activity.approverSignature && activity.checker && activity.checkerSignature;
+            const pdfLink = hasAllData ? `<a href="#" onclick="event.stopPropagation(); generatePDFReport('${activity.id}')" style="display: inline-block; margin-top: 10px; color: #28a745; font-weight: bold; text-decoration: none;">📥 ดาวน์โหลดไฟล์ PDF</a>` : '';
+            return `
             <div class="data-item" onclick="viewActivityDetail('${activity.id}')">
                 <h3>${activity.name}</h3>
                 <div class="data-meta">
@@ -1300,8 +1303,9 @@ function createSubmissionCharts() {
                     <span>📍 ${activity.location}</span>
                     <span>👤 ${activity.responsible}</span>
                 </div>
+                ${pdfLink}
             </div>
-        `).join('');
+        `}).join('');
     }
     
     function loadReports() {
@@ -2090,6 +2094,8 @@ function showSignatureModal(activity, userType) {
             </div>`
         : '<div class="line"></div>';
     
+    const checkerName = (activity.grade && activity.grade.startsWith('ม.')) ? 'นางสาวสงกรานต์ มหามิตร' : 'นางปณิตา ปัญานะ';
+
     const printHtml = `
         <!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานการปฏิบัติกิจกรรมของลูกเสือ - ${activity.name}</title>
         <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
@@ -2222,7 +2228,7 @@ function showSignatureModal(activity, userType) {
                 <div class="sig-box">
                     <div style="text-align: center;">
                         ${checkerSignatureHtml}
-                        <div class="sig-name">( นางปณิตา ปัญญานะ )</div>
+                        <div class="sig-name">( ${checkerName} )</div>
                         <div class="sig-title">ผู้ตรวจสอบ</div>
                     </div>
                 </div>
@@ -2230,7 +2236,7 @@ function showSignatureModal(activity, userType) {
                     <div style="text-align: center;">
                         ${approverSignatureHtml}
                         <div class="sig-name">( นางภิรญา สอนศิริ )</div>
-                        <div class="sig-title">รองผู้อำนวยการสถานศึกษา</div>
+                        <div class="sig-title">ผู้อนุมัติ</div>
                     </div>
                 </div>
             </div>
