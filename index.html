@@ -3650,6 +3650,67 @@ function generateAttendancePDFReport() {
         </tr>
     `).join('');
 
+    // ✅ สรุปแยกตามระดับชั้น/ห้อง
+    const gradeRankPDF = g => {
+        const m = String(g).match(/^(ป|ม)\.(\d+)(?:\/(\d+))?/);
+        return m ? (m[1] === 'ป' ? 0 : 1000) + Number(m[2]) * 10 + Number(m[3] || 0) : 9999;
+    };
+    const emptyStat = () => ({ total: 0, pass: 0, fail: 0, none: 0 });
+    const addStat = (target, s) => {
+        target.total++;
+        if (s.status === 'ผ่าน') target.pass++;
+        else if (s.status === 'ไม่ผ่าน') target.fail++;
+        else target.none++;
+    };
+    const byRoom = {};
+    const byType = { 'ป': emptyStat(), 'ม': emptyStat() };
+    allReports.forEach(s => {
+        const g = s.grade || 'ไม่ระบุ';
+        if (!byRoom[g]) byRoom[g] = emptyStat();
+        addStat(byRoom[g], s);
+        const t = String(g).charAt(0);
+        if (byType[t]) addStat(byType[t], s);
+    });
+    const pctOf = (n, t) => t > 0 ? (n / t * 100).toFixed(1) + '%' : '-';
+    const cell = 'padding: 6px 10px; text-align: center; border: 1px solid #ddd;';
+    const summaryRow = (label, x, rowStyle, plain) => `
+        <tr style="${rowStyle}">
+            <td style="${cell} text-align: left;">${label}</td>
+            <td style="${cell}">${x.total}</td>
+            <td style="${cell} ${plain ? '' : 'color: #28a745;'}">${x.pass}</td>
+            <td style="${cell} ${plain ? '' : 'color: #dc3545;'}">${x.fail}</td>
+            <td style="${cell}">${x.none}</td>
+            <td style="${cell} font-weight: 700;">${pctOf(x.pass, x.total)}</td>
+        </tr>`;
+
+    let gradeSummaryRows = '';
+    let curLevel = null, levelStat = emptyStat(), levelRooms = 0;
+    const flushLevel = () => {
+        if (curLevel && levelRooms > 1) {
+            gradeSummaryRows += summaryRow(`รวม ${curLevel}`, levelStat, 'background: #e8edf7; font-weight: 700;', false);
+        }
+    };
+    Object.keys(byRoom).sort((a, b) => gradeRankPDF(a) - gradeRankPDF(b)).forEach(g => {
+        const level = String(g).split('/')[0];
+        if (level !== curLevel) {
+            flushLevel();
+            curLevel = level; levelStat = emptyStat(); levelRooms = 0;
+        }
+        const x = byRoom[g];
+        gradeSummaryRows += summaryRow(g, x, '', false);
+        levelStat.total += x.total; levelStat.pass += x.pass;
+        levelStat.fail += x.fail; levelStat.none += x.none;
+        levelRooms++;
+    });
+    flushLevel();
+    if (currentReportFilter === 'all' && byType['ป'].total > 0 && byType['ม'].total > 0) {
+        gradeSummaryRows += summaryRow('รวมประถมศึกษา', byType['ป'], 'background: #d6e0f5; font-weight: 700;', false);
+        gradeSummaryRows += summaryRow('รวมมัธยมศึกษา', byType['ม'], 'background: #d6e0f5; font-weight: 700;', false);
+    }
+    gradeSummaryRows += summaryRow('รวมทั้งหมด',
+        { total: totalStudents, pass: passedCount, fail: failedCount, none: noDataCount },
+        'background: #1e3c72; color: white; font-weight: 700;', true);
+
     const printHtml = `<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -3740,6 +3801,21 @@ function generateAttendancePDFReport() {
             <div class="progress-bar-inner" style="width: ${passPercent}%;"></div>
         </div>
     </div>
+
+    <div class="section-title">🏫 สรุปผลแยกตามระดับชั้น</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="text-align: left;">ระดับชั้น / ห้อง</th>
+                <th style="text-align: center;">ทั้งหมด</th>
+                <th>ผ่าน</th>
+                <th>ไม่ผ่าน</th>
+                <th>ไม่มีข้อมูล</th>
+                <th>ร้อยละผ่าน</th>
+            </tr>
+        </thead>
+        <tbody>${gradeSummaryRows}</tbody>
+    </table>
 
     ${failedCount > 0 ? `
     <div class="section-title">❌ รายชื่อนักเรียนที่ไม่ผ่านเกณฑ์ (${failedCount} คน)</div>
