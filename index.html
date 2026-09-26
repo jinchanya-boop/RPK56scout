@@ -1622,7 +1622,7 @@ function showCheckerLoginModal() {
             </div>
             
             <div class="form-actions">
-                <button type="button" class="btn-cancel" onclick="document.getElementById('checkerLoginModal').remove(); goToTab('dashboard');">ยกเลิก</button>
+                <button type="button" class="btn-cancel" onclick="document.getElementById('checkerLoginModal').remove(); goToTab('dashboard');">
                 <button type="button" class="btn-submit" onclick="verifyCheckerLogin()">เข้าสู่ระบบ</button>
             </div>
         </div>
@@ -1645,7 +1645,7 @@ function showApproverLoginModal() {
             </div>
             
             <div class="form-actions">
-                <button type="button" class="btn-cancel" onclick="document.getElementById('approverLoginModal').remove(); goToTab('dashboard');">ยกเลิก</button>
+                <button type="button" class="btn-cancel" onclick="document.getElementById('approverLoginModal').remove(); goToTab('dashboard');">
                 <button type="button" class="btn-submit" onclick="verifyApproverLogin()">เข้าสู่ระบบ</button>
             </div>
         </div>
@@ -3566,7 +3566,7 @@ function showFailedStudentsModal() {
 }
 
 // ============================================
-// ✅ ฟังก์ชันส่งออก PDF รายงานผลการเข้าเรียน
+// ✅ ฟังก์ชันส่งออก PDF รายงานผลการเข้าเรียน (แยกระดับชั้น)
 // ============================================
 function generateAttendancePDFReport() {
     let allReports = calculateStudentReports();
@@ -3594,14 +3594,11 @@ function generateAttendancePDFReport() {
     });
 
     const totalStudents = allReports.length;
-    const passedStudents = allReports.filter(s => s.status === 'ผ่าน');
-    const failedStudents = allReports.filter(s => s.status === 'ไม่ผ่าน');
-    const noDataStudents = allReports.filter(s => s.status === 'ไม่มีข้อมูล');
-    const passedCount  = passedStudents.length;
-    const failedCount  = failedStudents.length;
-    const noDataCount  = noDataStudents.length;
-    const passPercent  = totalStudents > 0 ? ((passedCount / totalStudents) * 100).toFixed(1) : 0;
-    const failPercent  = totalStudents > 0 ? ((failedCount / totalStudents) * 100).toFixed(1) : 0;
+    const passedCount   = allReports.filter(s => s.status === 'ผ่าน').length;
+    const failedCount   = allReports.filter(s => s.status === 'ไม่ผ่าน').length;
+    const noDataCount   = allReports.filter(s => s.status === 'ไม่มีข้อมูล').length;
+    const passPercent   = totalStudents > 0 ? ((passedCount / totalStudents) * 100).toFixed(1) : 0;
+    const failPercent   = totalStudents > 0 ? ((failedCount / totalStudents) * 100).toFixed(1) : 0;
 
     const filterLabel = currentReportFilter === 'elementary' ? 'ประถมศึกษา'
                       : currentReportFilter === 'secondary'  ? 'มัธยมศึกษา'
@@ -3609,281 +3606,222 @@ function generateAttendancePDFReport() {
     const printDate = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
     const totalActivities = activitiesData.length;
 
-    // สร้างตารางรายชื่อคนไม่ผ่านแยกตามห้อง
-    const failedByGrade = {};
-    failedStudents.forEach(s => {
-        if (!failedByGrade[s.grade]) failedByGrade[s.grade] = [];
-        failedByGrade[s.grade].push(s);
-    });
-
-    const failedTableRows = failedStudents.map((s, i) => `
-        <tr style="background: ${i % 2 === 0 ? '#fff' : '#fef2f2'};">
-            <td style="padding: 6px 10px; text-align: center; border: 1px solid #ddd;">${i + 1}</td>
-            <td style="padding: 6px 10px; border: 1px solid #ddd;">${s.name}</td>
-            <td style="padding: 6px 10px; text-align: center; border: 1px solid #ddd;">${s.grade}</td>
-            <td style="padding: 6px 10px; text-align: center; border: 1px solid #ddd; color: #28a745;">${s.present}</td>
-            <td style="padding: 6px 10px; text-align: center; border: 1px solid #ddd; color: #ffc107;">${s.leave}</td>
-            <td style="padding: 6px 10px; text-align: center; border: 1px solid #ddd; color: #dc3545;">${s.absent}</td>
-            <td style="padding: 6px 10px; text-align: center; border: 1px solid #ddd; color: #e83e8c;">${s.skip}</td>
-            <td style="padding: 6px 10px; text-align: center; border: 1px solid #ddd; font-weight: bold; color: #dc3545;">${s.percentage}%</td>
-        </tr>
-    `).join('');
-
-    // ตารางนักเรียนทั้งหมด
-    const allTableRows = allReports.map((s, i) => `
-        <tr style="background: ${i % 2 === 0 ? '#fff' : '#f8f9fa'};">
-            <td style="padding: 5px 8px; text-align: center; border: 1px solid #ddd;">${i + 1}</td>
-            <td style="padding: 5px 8px; border: 1px solid #ddd; font-size: 12px;">${s.name}</td>
-            <td style="padding: 5px 8px; text-align: center; border: 1px solid #ddd;">${s.grade}</td>
-            <td style="padding: 5px 8px; text-align: center; border: 1px solid #ddd; color: #28a745;">${s.present}</td>
-            <td style="padding: 5px 8px; text-align: center; border: 1px solid #ddd; color: #ffc107;">${s.leave}</td>
-            <td style="padding: 5px 8px; text-align: center; border: 1px solid #ddd; color: #dc3545;">${s.absent}</td>
-            <td style="padding: 5px 8px; text-align: center; border: 1px solid #ddd; color: #e83e8c;">${s.skip}</td>
-            <td style="padding: 5px 8px; text-align: center; border: 1px solid #ddd; font-weight: bold;">${s.percentage}%</td>
-            <td style="padding: 5px 8px; text-align: center; border: 1px solid #ddd;">
-                <span style="display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;
-                    background: ${s.status === 'ผ่าน' ? '#d4edda' : s.status === 'ไม่ผ่าน' ? '#f8d7da' : '#e2e3e5'};
-                    color: ${s.status === 'ผ่าน' ? '#155724' : s.status === 'ไม่ผ่าน' ? '#721c24' : '#495057'};">
-                    ${s.status}
-                </span>
-            </td>
-        </tr>
-    `).join('');
-
-    // ✅ สรุปแยกตามระดับชั้น/ห้อง
-    const gradeRankPDF = g => {
-        const m = String(g).match(/^(ป|ม)\.(\d+)(?:\/(\d+))?/);
-        return m ? (m[1] === 'ป' ? 0 : 1000) + Number(m[2]) * 10 + Number(m[3] || 0) : 9999;
-    };
-    const emptyStat = () => ({ total: 0, pass: 0, fail: 0, none: 0 });
-    const addStat = (target, s) => {
-        target.total++;
-        if (s.status === 'ผ่าน') target.pass++;
-        else if (s.status === 'ไม่ผ่าน') target.fail++;
-        else target.none++;
-    };
-    const byRoom = {};
-    const byType = { 'ป': emptyStat(), 'ม': emptyStat() };
+    // แยกข้อมูลตามห้องเรียน
+    const gradeMap = {};
     allReports.forEach(s => {
-        const g = s.grade || 'ไม่ระบุ';
-        if (!byRoom[g]) byRoom[g] = emptyStat();
-        addStat(byRoom[g], s);
-        const t = String(g).charAt(0);
-        if (byType[t]) addStat(byType[t], s);
+        if (!gradeMap[s.grade]) gradeMap[s.grade] = [];
+        gradeMap[s.grade].push(s);
     });
-    const pctOf = (n, t) => t > 0 ? (n / t * 100).toFixed(1) + '%' : '-';
-    const cell = 'padding: 6px 10px; text-align: center; border: 1px solid #ddd;';
-    const summaryRow = (label, x, rowStyle, plain) => `
-        <tr style="${rowStyle}">
-            <td style="${cell} text-align: left;">${label}</td>
-            <td style="${cell}">${x.total}</td>
-            <td style="${cell} ${plain ? '' : 'color: #28a745;'}">${x.pass}</td>
-            <td style="${cell} ${plain ? '' : 'color: #dc3545;'}">${x.fail}</td>
-            <td style="${cell}">${x.none}</td>
-            <td style="${cell} font-weight: 700;">${pctOf(x.pass, x.total)}</td>
+    const sortedGrades = Object.keys(gradeMap).sort((a, b) => (gradeOrder[a] || 99) - (gradeOrder[b] || 99));
+
+    // ============================================================
+    // ส่วนที่ 1 — ตารางสรุปแยกระดับชั้น (หน้า 1)
+    // ============================================================
+    const gradeSummaryRows = sortedGrades.map((grade, idx) => {
+        const gs = gradeMap[grade];
+        const gTotal   = gs.length;
+        const gPassed  = gs.filter(s => s.status === 'ผ่าน').length;
+        const gFailed  = gs.filter(s => s.status === 'ไม่ผ่าน').length;
+        const gNoData  = gs.filter(s => s.status === 'ไม่มีข้อมูล').length;
+        const gPassPct = gTotal > 0 ? ((gPassed / gTotal) * 100).toFixed(1) : '0.0';
+        const barColor = parseFloat(gPassPct) >= 80 ? '#28a745' : parseFloat(gPassPct) >= 60 ? '#ffc107' : '#dc3545';
+        return `<tr style="background:${idx%2===0?'#fff':'#f8f9fa'};">
+            <td style="padding:7px 10px;border:1px solid #ddd;font-weight:700;color:#1e3c72;">${grade}</td>
+            <td style="padding:7px 10px;border:1px solid #ddd;text-align:center;">${gTotal}</td>
+            <td style="padding:7px 10px;border:1px solid #ddd;text-align:center;color:#28a745;font-weight:700;">${gPassed}</td>
+            <td style="padding:7px 10px;border:1px solid #ddd;text-align:center;color:#dc3545;font-weight:700;">${gFailed}</td>
+            <td style="padding:7px 10px;border:1px solid #ddd;text-align:center;color:#6c757d;">${gNoData}</td>
+            <td style="padding:7px 10px;border:1px solid #ddd;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <div style="flex:1;height:10px;background:#eee;border-radius:5px;overflow:hidden;">
+                        <div style="height:100%;width:${gPassPct}%;background:${barColor};border-radius:5px;"></div>
+                    </div>
+                    <span style="font-size:11px;font-weight:700;color:${barColor};min-width:36px;">${gPassPct}%</span>
+                </div>
+            </td>
         </tr>`;
+    }).join('');
 
-    let gradeSummaryRows = '';
-    let curLevel = null, levelStat = emptyStat(), levelRooms = 0;
-    const flushLevel = () => {
-        if (curLevel && levelRooms > 1) {
-            gradeSummaryRows += summaryRow(`รวม ${curLevel}`, levelStat, 'background: #e8edf7; font-weight: 700;', false);
-        }
-    };
-    Object.keys(byRoom).sort((a, b) => gradeRankPDF(a) - gradeRankPDF(b)).forEach(g => {
-        const level = String(g).split('/')[0];
-        if (level !== curLevel) {
-            flushLevel();
-            curLevel = level; levelStat = emptyStat(); levelRooms = 0;
-        }
-        const x = byRoom[g];
-        gradeSummaryRows += summaryRow(g, x, '', false);
-        levelStat.total += x.total; levelStat.pass += x.pass;
-        levelStat.fail += x.fail; levelStat.none += x.none;
-        levelRooms++;
+    const gradeSummaryTotal = `<tr style="background:#1e3c72;color:white;font-weight:700;">
+        <td style="padding:8px 10px;border:1px solid #1e3c72;">รวมทั้งหมด</td>
+        <td style="padding:8px 10px;border:1px solid #1e3c72;text-align:center;">${totalStudents}</td>
+        <td style="padding:8px 10px;border:1px solid #1e3c72;text-align:center;">${passedCount}</td>
+        <td style="padding:8px 10px;border:1px solid #1e3c72;text-align:center;">${failedCount}</td>
+        <td style="padding:8px 10px;border:1px solid #1e3c72;text-align:center;">${noDataCount}</td>
+        <td style="padding:8px 10px;border:1px solid #1e3c72;">${passPercent}% ผ่าน</td>
+    </tr>`;
+
+    // ============================================================
+    // ส่วนที่ 2 — รายชื่อคนไม่ผ่านแยกตามห้อง (หน้า 2)
+    // ============================================================
+    let failedByGradeHTML = '';
+    let globalFailIdx = 1;
+    sortedGrades.forEach(grade => {
+        const failedInGrade = gradeMap[grade].filter(s => s.status === 'ไม่ผ่าน');
+        if (failedInGrade.length === 0) return;
+        const gTotal  = gradeMap[grade].length;
+        const gFailed = failedInGrade.length;
+        failedByGradeHTML += `<div style="margin-bottom:18px;page-break-inside:avoid;">
+            <div style="background:#dc3545;color:white;padding:6px 12px;border-radius:6px 6px 0 0;font-size:13px;font-weight:700;display:flex;justify-content:space-between;">
+                <span>ชั้น ${grade}</span>
+                <span>ไม่ผ่าน ${gFailed} จาก ${gTotal} คน</span>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead><tr style="background:#fde8ea;">
+                    <th style="padding:6px 8px;border:1px solid #f5c6cb;width:35px;text-align:center;">ลำดับ</th>
+                    <th style="padding:6px 8px;border:1px solid #f5c6cb;text-align:left;">ชื่อ-นามสกุล</th>
+                    <th style="padding:6px 8px;border:1px solid #f5c6cb;width:40px;text-align:center;">มา</th>
+                    <th style="padding:6px 8px;border:1px solid #f5c6cb;width:40px;text-align:center;">ลา</th>
+                    <th style="padding:6px 8px;border:1px solid #f5c6cb;width:40px;text-align:center;">ขาด</th>
+                    <th style="padding:6px 8px;border:1px solid #f5c6cb;width:40px;text-align:center;">โดด</th>
+                    <th style="padding:6px 8px;border:1px solid #f5c6cb;width:60px;text-align:center;">%</th>
+                </tr></thead>
+                <tbody>${failedInGrade.map((s, i) => `<tr style="background:${i%2===0?'#fff':'#fff5f5'};">
+                    <td style="padding:5px 8px;border:1px solid #f5c6cb;text-align:center;">${globalFailIdx++}</td>
+                    <td style="padding:5px 8px;border:1px solid #f5c6cb;">${s.name}</td>
+                    <td style="padding:5px 8px;border:1px solid #f5c6cb;text-align:center;color:#28a745;">${s.present}</td>
+                    <td style="padding:5px 8px;border:1px solid #f5c6cb;text-align:center;color:#ffc107;">${s.leave}</td>
+                    <td style="padding:5px 8px;border:1px solid #f5c6cb;text-align:center;color:#dc3545;">${s.absent}</td>
+                    <td style="padding:5px 8px;border:1px solid #f5c6cb;text-align:center;color:#e83e8c;">${s.skip}</td>
+                    <td style="padding:5px 8px;border:1px solid #f5c6cb;text-align:center;font-weight:700;color:#dc3545;">${s.percentage}%</td>
+                </tr>`).join('')}</tbody>
+            </table>
+        </div>`;
     });
-    flushLevel();
-    if (currentReportFilter === 'all' && byType['ป'].total > 0 && byType['ม'].total > 0) {
-        gradeSummaryRows += summaryRow('รวมประถมศึกษา', byType['ป'], 'background: #d6e0f5; font-weight: 700;', false);
-        gradeSummaryRows += summaryRow('รวมมัธยมศึกษา', byType['ม'], 'background: #d6e0f5; font-weight: 700;', false);
+
+    if (!failedByGradeHTML) {
+        failedByGradeHTML = `<div style="text-align:center;padding:30px;background:#d4edda;border-radius:10px;color:#155724;font-size:16px;font-weight:600;">
+            🎉 ยอดเยี่ยม! ไม่มีนักเรียนที่ไม่ผ่านเกณฑ์</div>`;
     }
-    gradeSummaryRows += summaryRow('รวมทั้งหมด',
-        { total: totalStudents, pass: passedCount, fail: failedCount, none: noDataCount },
-        'background: #1e3c72; color: white; font-weight: 700;', true);
 
-    const printHtml = `<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <title>รายงานผลการเข้าร่วมกิจกรรมลูกเสือ - ${filterLabel}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        @page { size: A4; margin: 1.5cm 1.5cm 2cm 1.5cm; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Sarabun', sans-serif; font-size: 13px; color: #222; background: white; }
-        .page-header { text-align: center; border-bottom: 3px solid #1e3c72; padding-bottom: 12px; margin-bottom: 16px; }
-        .page-header h1 { font-size: 18px; font-weight: 700; color: #1e3c72; margin-bottom: 4px; }
-        .page-header h2 { font-size: 14px; font-weight: 400; color: #444; margin-bottom: 4px; }
-        .page-header .meta { font-size: 12px; color: #666; }
-        /* Summary Grid */
-        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-        .summary-box { border-radius: 10px; padding: 14px; text-align: center; }
-        .summary-box .num { font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
-        .summary-box .lbl { font-size: 11px; font-weight: 600; opacity: 0.85; }
-        .summary-box .pct { font-size: 11px; margin-top: 4px; opacity: 0.75; }
-        .box-total  { background: #e8edf7; color: #1e3c72; }
-        .box-pass   { background: #d4edda; color: #155724; }
-        .box-fail   { background: #f8d7da; color: #721c24; }
-        .box-nodata { background: #e2e3e5; color: #495057; }
-        /* Progress Bar */
-        .progress-wrap { margin-bottom: 20px; }
-        .progress-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
-        .progress-bar-outer { height: 14px; background: #eee; border-radius: 7px; overflow: hidden; }
-        .progress-bar-inner { height: 100%; background: linear-gradient(90deg, #28a745, #20c997); border-radius: 7px; }
-        /* Section */
-        .section-title { font-size: 14px; font-weight: 700; color: #1e3c72; border-left: 4px solid #1e3c72; padding-left: 10px; margin: 18px 0 10px 0; }
-        /* Table */
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        thead tr { background: #1e3c72; color: white; }
-        thead th { padding: 8px 10px; text-align: center; font-weight: 600; border: 1px solid #1e3c72; }
-        thead th:nth-child(2) { text-align: left; }
-        tbody tr:hover { background: #f0f4ff; }
-        /* Signature */
-        .sig-section { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 30px; page-break-inside: avoid; }
-        .sig-box { text-align: center; }
-        .sig-line { border-bottom: 1px solid #333; margin: 35px 10px 5px 10px; }
-        .sig-name { font-size: 12px; }
-        .sig-title { font-size: 11px; color: #555; }
-        /* Print */
-        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
-        .page-break { page-break-before: always; }
-        .fail-highlight { background: #fff3cd !important; }
-    </style>
-</head>
-<body>
+    // ============================================================
+    // ส่วนที่ 3 — รายชื่อทุกคนแยกตามห้อง (หน้า 3+)
+    // ============================================================
+    let allByGradeHTML = '';
+    let globalIdx = 1;
+    sortedGrades.forEach(grade => {
+        const students = gradeMap[grade];
+        const gTotal   = students.length;
+        const gPassed  = students.filter(s => s.status === 'ผ่าน').length;
+        const gFailed  = students.filter(s => s.status === 'ไม่ผ่าน').length;
+        allByGradeHTML += `<div style="margin-bottom:22px;page-break-inside:avoid;">
+            <div style="background:#1e3c72;color:white;padding:7px 14px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:13px;font-weight:700;">ชั้น ${grade}</span>
+                <span style="font-size:12px;">รวม ${gTotal} คน | ✅ ผ่าน ${gPassed} | ❌ ไม่ผ่าน ${gFailed}</span>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
+                <thead><tr style="background:#e8edf7;">
+                    <th style="padding:5px 7px;border:1px solid #c8d3e8;width:30px;text-align:center;">ลำดับ</th>
+                    <th style="padding:5px 7px;border:1px solid #c8d3e8;text-align:left;">ชื่อ-นามสกุล</th>
+                    <th style="padding:5px 7px;border:1px solid #c8d3e8;width:35px;text-align:center;">มา</th>
+                    <th style="padding:5px 7px;border:1px solid #c8d3e8;width:35px;text-align:center;">ลา</th>
+                    <th style="padding:5px 7px;border:1px solid #c8d3e8;width:35px;text-align:center;">ขาด</th>
+                    <th style="padding:5px 7px;border:1px solid #c8d3e8;width:35px;text-align:center;">โดด</th>
+                    <th style="padding:5px 7px;border:1px solid #c8d3e8;width:50px;text-align:center;">%</th>
+                    <th style="padding:5px 7px;border:1px solid #c8d3e8;width:60px;text-align:center;">สถานะ</th>
+                </tr></thead>
+                <tbody>${students.map((s, i) => `<tr style="background:${s.status==='ไม่ผ่าน'?'#fff5f5':(i%2===0?'#fff':'#f8f9fa')};">
+                    <td style="padding:4px 7px;border:1px solid #ddd;text-align:center;">${globalIdx++}</td>
+                    <td style="padding:4px 7px;border:1px solid #ddd;">${s.name}</td>
+                    <td style="padding:4px 7px;border:1px solid #ddd;text-align:center;color:#28a745;">${s.present}</td>
+                    <td style="padding:4px 7px;border:1px solid #ddd;text-align:center;color:#ffc107;">${s.leave}</td>
+                    <td style="padding:4px 7px;border:1px solid #ddd;text-align:center;color:#dc3545;">${s.absent}</td>
+                    <td style="padding:4px 7px;border:1px solid #ddd;text-align:center;color:#e83e8c;">${s.skip}</td>
+                    <td style="padding:4px 7px;border:1px solid #ddd;text-align:center;font-weight:700;color:${s.status==='ไม่ผ่าน'?'#dc3545':'#28a745'};">${s.percentage}%</td>
+                    <td style="padding:4px 7px;border:1px solid #ddd;text-align:center;">
+                        <span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;
+                            background:${s.status==='ผ่าน'?'#d4edda':s.status==='ไม่ผ่าน'?'#f8d7da':'#e2e3e5'};
+                            color:${s.status==='ผ่าน'?'#155724':s.status==='ไม่ผ่าน'?'#721c24':'#495057'};">
+                            ${s.status}
+                        </span>
+                    </td>
+                </tr>`).join('')}</tbody>
+            </table>
+        </div>`;
+    });
 
-    <!-- ===== หน้าที่ 1: สรุปผล ===== -->
-    <div class="page-header">
-        <h1>รายงานผลการเข้าร่วมกิจกรรมลูกเสือ</h1>
+    // ============================================================
+    // HTML สมบูรณ์
+    // ============================================================
+    const CSS = `@page{size:A4;margin:1.5cm 1.5cm 2cm 1.5cm;}*{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Sarabun',sans-serif;font-size:13px;color:#222;background:white;}
+        .ph{text-align:center;border-bottom:3px solid #1e3c72;padding-bottom:10px;margin-bottom:14px;}
+        .ph h1{font-size:17px;font-weight:700;color:#1e3c72;margin-bottom:3px;}
+        .ph h2{font-size:13px;font-weight:400;color:#444;margin-bottom:3px;}
+        .ph .meta{font-size:11px;color:#666;}
+        .sg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+        .sb{border-radius:8px;padding:12px;text-align:center;}
+        .sb .num{font-size:30px;font-weight:700;line-height:1;margin-bottom:3px;}
+        .sb .lbl{font-size:11px;font-weight:600;}
+        .sb .pct{font-size:10px;margin-top:3px;opacity:.75;}
+        .t{background:#e8edf7;color:#1e3c72;}.p{background:#d4edda;color:#155724;}
+        .f{background:#f8d7da;color:#721c24;}.n{background:#e2e3e5;color:#495057;}
+        .pw{margin-bottom:14px;}.pl{display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;}
+        .po{height:12px;background:#eee;border-radius:6px;overflow:hidden;}
+        .pi{height:100%;background:linear-gradient(90deg,#28a745,#20c997);border-radius:6px;}
+        .st{font-size:13px;font-weight:700;color:#1e3c72;border-left:4px solid #1e3c72;padding-left:10px;margin:14px 0 8px 0;}
+        .ss{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:30px;page-break-inside:avoid;}
+        .sb2{text-align:center;}.sl{border-bottom:1px solid #333;margin:35px 10px 5px 10px;}
+        .sn{font-size:12px;}.st2{font-size:11px;color:#555;}
+        .pb{page-break-before:always;}
+        @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}`;
+
+    const hdr = (sub) => `<div class="ph">
+        <h1>รายงานผลการเข้าร่วมกิจกรรมลูกเสือ${sub?' — '+sub:''}</h1>
         <h2>โรงเรียนราชประชานุเคราะห์ 56 จังหวัดน่าน</h2>
         <div class="meta">ระดับ: <strong>${filterLabel}</strong> &nbsp;|&nbsp; จำนวนกิจกรรม: <strong>${totalActivities} กิจกรรม</strong> &nbsp;|&nbsp; วันที่พิมพ์: <strong>${printDate}</strong></div>
-    </div>
+    </div>`;
 
-    <div class="summary-grid">
-        <div class="summary-box box-total">
-            <div class="num">${totalStudents}</div>
-            <div class="lbl">👥 นักเรียนทั้งหมด</div>
-            <div class="pct">คน</div>
-        </div>
-        <div class="summary-box box-pass">
-            <div class="num">${passedCount}</div>
-            <div class="lbl">✅ ผ่านเกณฑ์ (≥80%)</div>
-            <div class="pct">${passPercent}%</div>
-        </div>
-        <div class="summary-box box-fail">
-            <div class="num">${failedCount}</div>
-            <div class="lbl">❌ ไม่ผ่านเกณฑ์ (&lt;80%)</div>
-            <div class="pct">${failPercent}%</div>
-        </div>
-        <div class="summary-box box-nodata">
-            <div class="num">${noDataCount}</div>
-            <div class="lbl">⚪ ไม่มีข้อมูล</div>
-            <div class="pct">คน</div>
-        </div>
-    </div>
+    const printHtml = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+<title>รายงานผลการเข้าร่วมกิจกรรมลูกเสือ - ${filterLabel}</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>${CSS}</style></head><body>
 
-    <div class="progress-wrap">
-        <div class="progress-label">
-            <span>อัตราการผ่าน</span>
-            <span><strong>${passedCount}</strong> จาก <strong>${totalStudents}</strong> คน (${passPercent}%)</span>
-        </div>
-        <div class="progress-bar-outer">
-            <div class="progress-bar-inner" style="width: ${passPercent}%;"></div>
-        </div>
-    </div>
+<!-- หน้า 1: สรุปรวม + ตารางแยกชั้น -->
+${hdr('สรุปผลรวม')}
+<div class="sg">
+    <div class="sb t"><div class="num">${totalStudents}</div><div class="lbl">👥 นักเรียนทั้งหมด</div><div class="pct">คน</div></div>
+    <div class="sb p"><div class="num">${passedCount}</div><div class="lbl">✅ ผ่านเกณฑ์ (≥80%)</div><div class="pct">${passPercent}%</div></div>
+    <div class="sb f"><div class="num">${failedCount}</div><div class="lbl">❌ ไม่ผ่านเกณฑ์ (&lt;80%)</div><div class="pct">${failPercent}%</div></div>
+    <div class="sb n"><div class="num">${noDataCount}</div><div class="lbl">⚪ ไม่มีข้อมูล</div><div class="pct">คน</div></div>
+</div>
+<div class="pw">
+    <div class="pl"><span>อัตราการผ่านโดยรวม</span><span><strong>${passedCount}</strong> จาก <strong>${totalStudents}</strong> คน (${passPercent}%)</span></div>
+    <div class="po"><div class="pi" style="width:${passPercent}%;"></div></div>
+</div>
+<div class="st">📊 สรุปผลแยกตามระดับชั้น</div>
+<table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="background:#1e3c72;color:white;">
+        <th style="padding:8px 10px;border:1px solid #1e3c72;text-align:left;width:80px;">ชั้น/ห้อง</th>
+        <th style="padding:8px 10px;border:1px solid #1e3c72;text-align:center;width:60px;">นักเรียน</th>
+        <th style="padding:8px 10px;border:1px solid #1e3c72;text-align:center;width:60px;">✅ ผ่าน</th>
+        <th style="padding:8px 10px;border:1px solid #1e3c72;text-align:center;width:60px;">❌ ไม่ผ่าน</th>
+        <th style="padding:8px 10px;border:1px solid #1e3c72;text-align:center;width:60px;">⚪ ไม่มีข้อมูล</th>
+        <th style="padding:8px 10px;border:1px solid #1e3c72;text-align:left;">อัตราผ่าน</th>
+    </tr></thead>
+    <tbody>${gradeSummaryRows}${gradeSummaryTotal}</tbody>
+</table>
 
-    <div class="section-title">🏫 สรุปผลแยกตามระดับชั้น</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="text-align: left;">ระดับชั้น / ห้อง</th>
-                <th style="text-align: center;">ทั้งหมด</th>
-                <th>ผ่าน</th>
-                <th>ไม่ผ่าน</th>
-                <th>ไม่มีข้อมูล</th>
-                <th>ร้อยละผ่าน</th>
-            </tr>
-        </thead>
-        <tbody>${gradeSummaryRows}</tbody>
-    </table>
+<!-- หน้า 2: รายชื่อไม่ผ่านแยกห้อง -->
+<div class="pb"></div>
+${hdr('รายชื่อนักเรียนที่ไม่ผ่านเกณฑ์')}
+<div class="st">❌ รายชื่อนักเรียนที่ไม่ผ่านเกณฑ์ รวม ${failedCount} คน (เกณฑ์ผ่าน ≥ 80%)</div>
+${failedByGradeHTML}
 
-    ${failedCount > 0 ? `
-    <div class="section-title">❌ รายชื่อนักเรียนที่ไม่ผ่านเกณฑ์ (${failedCount} คน)</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 40px;">ลำดับ</th>
-                <th style="text-align: left;">ชื่อ-นามสกุล</th>
-                <th>ชั้น</th>
-                <th>มา</th>
-                <th>ลา</th>
-                <th>ขาด</th>
-                <th>โดด</th>
-                <th>เปอร์เซ็นต์</th>
-            </tr>
-        </thead>
-        <tbody>${failedTableRows}</tbody>
-    </table>` : `
-    <div style="text-align: center; padding: 20px; background: #d4edda; border-radius: 10px; color: #155724; font-size: 16px; font-weight: 600;">
-        🎉 ยอดเยี่ยม! นักเรียนทุกคนผ่านเกณฑ์การเข้าร่วมกิจกรรม
-    </div>`}
+<!-- หน้า 3+: รายชื่อทุกคนแยกห้อง -->
+<div class="pb"></div>
+${hdr('รายชื่อนักเรียนทั้งหมด')}
+<div class="st">📋 รายชื่อนักเรียนทั้งหมด ${totalStudents} คน แยกตามระดับชั้น</div>
+${allByGradeHTML}
 
-    <!-- ===== หน้าที่ 2: รายชื่อทั้งหมด ===== -->
-    <div class="page-break"></div>
-    <div class="page-header">
-        <h1>รายงานผลการเข้าร่วมกิจกรรมลูกเสือ (รายละเอียดทุกคน)</h1>
-        <h2>โรงเรียนราชประชานุเคราะห์ 56 จังหวัดน่าน &nbsp;|&nbsp; ระดับ: ${filterLabel}</h2>
-    </div>
+<!-- ลายเซ็น -->
+<div class="ss">
+    <div class="sb2"><div class="sl"></div><div class="sn">( .................................................. )</div><div class="st2">ผู้จัดทำรายงาน</div></div>
+    <div class="sb2"><div class="sl"></div><div class="sn">( .................................................. )</div><div class="st2">ผู้ตรวจสอบ</div></div>
+    <div class="sb2"><div class="sl"></div><div class="sn">( นางภิรญา สอนศิริ )</div><div class="st2">รองผู้อำนวยการโรงเรียน</div></div>
+</div>
 
-    <div class="section-title">📋 รายชื่อนักเรียนทั้งหมด (${totalStudents} คน)</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 35px;">ลำดับ</th>
-                <th style="text-align: left;">ชื่อ-นามสกุล</th>
-                <th>ชั้น</th>
-                <th>มา</th>
-                <th>ลา</th>
-                <th>ขาด</th>
-                <th>โดด</th>
-                <th>เปอร์เซ็นต์</th>
-                <th>สถานะ</th>
-            </tr>
-        </thead>
-        <tbody>${allTableRows}</tbody>
-    </table>
-
-    <!-- ===== ลายมือชื่อ ===== -->
-    <div class="sig-section">
-        <div class="sig-box">
-            <div class="sig-line"></div>
-            <div class="sig-name">( .................................................. )</div>
-            <div class="sig-title">ผู้จัดทำรายงาน</div>
-        </div>
-        <div class="sig-box">
-            <div class="sig-line"></div>
-            <div class="sig-name">( .................................................. )</div>
-            <div class="sig-title">ผู้ตรวจสอบ</div>
-        </div>
-        <div class="sig-box">
-            <div class="sig-line"></div>
-            <div class="sig-name">( นางภิรญา สอนศิริ )</div>
-            <div class="sig-title">รองผู้อำนวยการโรงเรียน</div>
-        </div>
-    </div>
-
-</body>
-</html>`;
+</body></html>`;
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
