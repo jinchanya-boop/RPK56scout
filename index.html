@@ -501,6 +501,7 @@
             .modal-header h2 { font-size: 20px; }
             .modal-body, .modal-header { padding: 20px; }
             .form-actions { flex-direction: column; }
+            .export-pdf-btn { margin-left: 0 !important; width: 100%; }
         }
 
         /* Image Upload Styles */
@@ -594,8 +595,8 @@
             <div id="reports" class="tab-content">
                 <h2 style="margin-bottom: 20px; color: #1e3c72;">รายงานสรุปผลการเข้าร่วม</h2>
                 
-                <!-- ✅ ตัวกรองระดับการศึกษา สำหรับรายงาน -->
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                <!-- ✅ ตัวกรองระดับการศึกษา สำหรับรายงาน + ปุ่มส่งออก PDF -->
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
                     <button class="btn" id="filterAllReports" onclick="filterReports('all')" style="background: #1e3c72; color: white; padding: 10px 20px; border-radius: 25px; border: 2px solid #1e3c72; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                         📋 ทั้งหมด
                     </button>
@@ -604,6 +605,10 @@
                     </button>
                     <button class="btn" id="filterSecondaryReports" onclick="filterReports('secondary')" style="background: white; color: #1e3c72; padding: 10px 20px; border-radius: 25px; border: 2px solid #1e3c72; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                         📚 มัธยมศึกษา
+                    </button>
+                    <!-- ✅ ใหม่: ปุ่มส่งออก PDF สรุปผ่าน/ไม่ผ่าน (ส่งออกตามตัวกรองที่เลือกอยู่) -->
+                    <button class="btn btn-danger export-pdf-btn" onclick="exportPassFailPDF()" style="margin-left: auto; padding: 10px 20px; border-radius: 25px; border: 2px solid #dc3545;">
+                        🖨️ ส่งออก PDF สรุปผ่าน/ไม่ผ่าน
                     </button>
                 </div>
                 
@@ -731,8 +736,9 @@
     const API_URL = 'https://script.google.com/macros/s/AKfycbw83ygWiQHxyNnb6kOjnG1gwtnSubyYAOULK4Myq9JLF8AT8LiOcu1iyfTtOEPvuWx71g/exec';
     let studentsData = [];
     let activitiesData = [];
-    let currentStudentFilter = 'all';  // ← เพิ่มบรรทัดใหม่นี้
+    let currentStudentFilter = 'all';
     let currentReportFilter = 'all';
+    let lastDataLoad = null;
     let teachersData = [
         { id: 'TCH_1', name: 'นางประทุม  มหาวงศ์นันท์' },
         { id: 'TCH_2', name: 'นางสาวภัทราภรณ์  ศรีวิไชย' },
@@ -897,10 +903,8 @@ function goToTab(tabName) {
         targetTab.classList.add('active');
     }
     
-    const targetButton = Array.from(buttons).find(btn => {
-        const onclick = btn.getAttribute('onclick');
-        return onclick && onclick.includes(`'${tabName}'`);
-    });
+    // ✅ แก้ไข: หาปุ่มจาก data-tab (ปุ่มแท็บใช้ data-tab ไม่ได้ใช้ onclick)
+    const targetButton = document.querySelector(`.nav-tab[data-tab="${tabName}"]`);
     
     if (targetButton) {
         targetButton.classList.add('active');
@@ -934,9 +938,9 @@ function checkSystemStatus() {
         'loadData': typeof loadData === 'function',
         'loadDashboard': typeof loadDashboard === 'function',
         'loadActivities': typeof loadActivities === 'function',
-        'studentsData': Array.isArray(window.studentsData),
-        'activitiesData': Array.isArray(window.activitiesData),
-        'teachersData': Array.isArray(window.teachersData),
+        'studentsData': Array.isArray(studentsData),
+        'activitiesData': Array.isArray(activitiesData),
+        'teachersData': Array.isArray(teachersData),
     };
     
     console.group('System Status Check');
@@ -1097,11 +1101,9 @@ function checkSystemStatus() {
     document.getElementById('passedStudents').textContent = passed;
     document.getElementById('failedStudents').textContent = failed;
     
-    // ✅ เพิ่มโค้ดนี้เข้าไป
     renderSubmissionCharts();
 }
 
-// ✅ เพิ่มฟังก์ชันนี้ใหม่
 function renderSubmissionCharts() {
     const chartHTML = `
         <h2 style="color: #1e3c72; margin-top: 30px; margin-bottom: 20px;">📊 สรุปสถานะการส่งรายงาน</h2>
@@ -1197,7 +1199,7 @@ function updateSubmissionStats() {
     // อัปเดตตาราง
     const tbody = document.getElementById('submissionTableBody');
     tbody.innerHTML = activitiesData.map((activity, index) => {
-        const submissionDate = new Date(parseInt(activity.id.split('_')[1])).toLocaleDateString('th-TH');
+        const submissionDate = new Date(parseInt(String(activity.id).split('_')[1])).toLocaleDateString('th-TH');
         const checkerBadge = activity.checker ? 
             `<span class="status-badge" style="background: #cfe2ff; color: #084298; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">✓ ${activity.checker}</span>` :
             `<span class="status-badge" style="background: #fff3cd; color: #664d03; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">⏳ รอตรวจ</span>`;
@@ -1237,7 +1239,6 @@ function createSubmissionCharts() {
     };
     
     // Doughnut Chart
-    // Doughnut Chart
     const ctx1 = document.getElementById('statusChart');
     if (ctx1) {
         window.statusChartInstance = new Chart(ctx1, {
@@ -1259,7 +1260,6 @@ function createSubmissionCharts() {
         });
     }
     
-    // Bar Chart
     // Bar Chart
     const ctx2 = document.getElementById('progressChart');
     if (ctx2) {
@@ -1313,32 +1313,15 @@ function createSubmissionCharts() {
          let reportData = calculateStudentReports();
          
          if (currentReportFilter === 'elementary') {
-             reportData = reportData.filter(s => {
-                 const grade = s.grade.replace('/1', '').replace('/2', '').replace('/3', '');
-                 return grade.startsWith('ป.');
-             });
+             reportData = reportData.filter(s => String(s.grade).startsWith('ป.'));
          } else if (currentReportFilter === 'secondary') {
-             reportData = reportData.filter(s => {
-                 const grade = s.grade.replace('/1', '').replace('/2', '');
-                 return grade.startsWith('ม.');
-             });
+             reportData = reportData.filter(s => String(s.grade).startsWith('ม.'));
          }
 
-         const gradeOrder = {
-             'ป.1': 1, 'ป.2': 2, 'ป.3/1': 3, 'ป.3/2': 4, 'ป.4/1': 5, 'ป.4/2': 6, 'ป.5/1': 7, 'ป.5/2': 8, 'ป.6/1': 9, 'ป.6/2': 10, 'ป.6/3': 11,
-             'ม.1/1': 12, 'ม.1/2': 13, 'ม.1/3': 14, 'ม.1/4': 15, 'ม.1/5': 16,
-             'ม.2/1': 17, 'ม.2/2': 18, 'ม.2/3': 19, 'ม.2/4': 20, 'ม.2/5': 21,
-             'ม.3/1': 22, 'ม.3/2': 23, 'ม.3/3': 24, 'ม.3/4': 25, 'ม.3/5': 26
-         };
-         
-         reportData.sort((a, b) => {
-             let gA = gradeOrder[a.grade] || 99;
-             let gB = gradeOrder[b.grade] || 99;
-             if (gA !== gB) return gA - gB;
-             let nA = parseInt(a.number) || 0;
-             let nB = parseInt(b.number) || 0;
-             return nA - nB;
-         });
+         // ✅ ใช้ gradeRank() จัดเรียงชั้น (รองรับ ม.4/2 และห้องใหม่อัตโนมัติ)
+         reportData.sort((a, b) =>
+             gradeRank(a.grade) - gradeRank(b.grade) ||
+             (parseInt(a.number) || 0) - (parseInt(b.number) || 0));
          
          reportData = reportData.map((s, idx) => ({...s, index: idx + 1}));
 
@@ -1373,6 +1356,139 @@ function createSubmissionCharts() {
         
         loadReports();
     }
+
+    // ============================================================
+    // ✅ ใหม่: จัดลำดับชั้นอัตโนมัติ (ป. ก่อน ม. เรียงตามชั้นและห้อง)
+    // ============================================================
+    function gradeRank(g = '') {
+        const m = String(g).match(/^(ป|ม)\.(\d+)(?:\/(\d+))?/);
+        if (!m) return 9999;
+        return (m[1] === 'ป' ? 0 : 1000) + Number(m[2]) * 10 + Number(m[3] || 0);
+    }
+
+    // ============================================================
+    // ✅ ใหม่: ส่งออก PDF สรุปนักเรียนผ่าน/ไม่ผ่าน
+    // ============================================================
+    function exportPassFailPDF() {
+        let reports = calculateStudentReports();
+
+        if (currentReportFilter === 'elementary') {
+            reports = reports.filter(s => String(s.grade).startsWith('ป.'));
+        } else if (currentReportFilter === 'secondary') {
+            reports = reports.filter(s => String(s.grade).startsWith('ม.'));
+        }
+        if (reports.length === 0) return alert('ไม่มีข้อมูลนักเรียนสำหรับออกรายงาน');
+
+        reports.sort((a, b) =>
+            gradeRank(a.grade) - gradeRank(b.grade) ||
+            (parseInt(a.number) || 0) - (parseInt(b.number) || 0));
+
+        const passed = reports.filter(r => r.status === 'ผ่าน');
+        const failed = reports.filter(r => r.status === 'ไม่ผ่าน');
+        const noData = reports.filter(r => r.status === 'ไม่มีข้อมูล');
+        const evaluated = passed.length + failed.length;
+        const passRate = evaluated ? (passed.length / evaluated * 100).toFixed(2) : '0.00';
+
+        // สรุปรายห้อง
+        const byGrade = {};
+        reports.forEach(r => {
+            const g = r.grade || 'ไม่ระบุ';
+            if (!byGrade[g]) byGrade[g] = { total: 0, pass: 0, fail: 0, none: 0 };
+            byGrade[g].total++;
+            if (r.status === 'ผ่าน') byGrade[g].pass++;
+            else if (r.status === 'ไม่ผ่าน') byGrade[g].fail++;
+            else byGrade[g].none++;
+        });
+
+        const gradeRows = Object.keys(byGrade)
+            .sort((a, b) => gradeRank(a) - gradeRank(b))
+            .map(g => {
+                const x = byGrade[g];
+                const ev = x.pass + x.fail;
+                return `<tr>
+                    <td class="c">${g}</td><td class="c">${x.total}</td>
+                    <td class="c">${x.pass}</td><td class="c red">${x.fail}</td>
+                    <td class="c">${x.none}</td>
+                    <td class="c">${ev ? (x.pass / ev * 100).toFixed(1) + '%' : '-'}</td>
+                </tr>`;
+            }).join('');
+
+        const failedRows = failed.length
+            ? failed.map((s, i) => `<tr>
+                <td class="c">${i + 1}</td><td>${s.name}</td>
+                <td class="c">${s.grade}</td><td class="c">${s.number}</td>
+                <td class="c">${s.present}</td><td class="c">${s.leave}</td>
+                <td class="c">${s.absent}</td><td class="c">${s.skip}</td>
+                <td class="c red"><b>${s.percentage}%</b></td>
+              </tr>`).join('')
+            : `<tr><td colspan="9" class="c">ไม่มีนักเรียนที่ไม่ผ่านเกณฑ์</td></tr>`;
+
+        const levelLabel = { all: 'ทุกระดับชั้น', elementary: 'ระดับประถมศึกษา', secondary: 'ระดับมัธยมศึกษา' }[currentReportFilter];
+        const today = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+        <title>รายงานสรุปผลกิจกรรมลูกเสือ - ${levelLabel}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
+        <style>
+            @page { size: A4; margin: 1.5cm 1.5cm 1.5cm 2cm; }
+            body { font-family: 'Sarabun', sans-serif; font-size: 14px; color: #000; margin: 0; }
+            h1 { font-size: 20px; text-align: center; margin: 0; }
+            h2 { font-size: 16px; text-align: center; margin: 2px 0 12px; font-weight: normal; }
+            h3 { font-size: 16px; margin: 18px 0 6px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #000; padding: 4px 6px; }
+            th { background: #e9ecef; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
+            .c { text-align: center; }
+            .red { color: #c00; }
+            .summary td { font-size: 15px; }
+            .summary td:first-child { width: 65%; }
+            .note { font-size: 12px; margin-top: 6px; }
+            .sig { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;
+                   margin-top: 40px; text-align: center; page-break-inside: avoid; }
+            .sig div { line-height: 1.8; }
+            @media print { th { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        </style></head><body>
+            <h1>รายงานสรุปผลการเข้าร่วมกิจกรรมลูกเสือ (${levelLabel})</h1>
+            <h2>โรงเรียนราชประชานุเคราะห์ 56 จังหวัดน่าน &nbsp;|&nbsp; ข้อมูล ณ วันที่ ${today}</h2>
+
+            <h3>1. สรุปภาพรวม</h3>
+            <table class="summary">
+                <tr><td>จำนวนนักเรียนทั้งหมด</td><td class="c"><b>${reports.length}</b> คน</td></tr>
+                <tr><td>ผ่านเกณฑ์ (ไม่น้อยกว่าร้อยละ 80)</td><td class="c"><b>${passed.length}</b> คน</td></tr>
+                <tr><td>ไม่ผ่านเกณฑ์ (ต่ำกว่าร้อยละ 80)</td><td class="c red"><b>${failed.length}</b> คน</td></tr>
+                <tr><td>ยังไม่มีข้อมูลกิจกรรม</td><td class="c">${noData.length} คน</td></tr>
+                <tr><td>ร้อยละผู้ผ่าน (คิดจากผู้ที่มีข้อมูล)</td><td class="c"><b>${passRate}%</b></td></tr>
+            </table>
+            <div class="note">* เกณฑ์การผ่าน: (มา + ลา) ÷ จำนวนกิจกรรมของห้อง × 100 ต้องไม่น้อยกว่าร้อยละ 80</div>
+
+            <h3>2. สรุปรายห้อง</h3>
+            <table>
+                <thead><tr><th>ชั้น</th><th>ทั้งหมด</th><th>ผ่าน</th><th>ไม่ผ่าน</th><th>ไม่มีข้อมูล</th><th>ร้อยละผ่าน</th></tr></thead>
+                <tbody>${gradeRows}</tbody>
+            </table>
+
+            <h3>3. รายชื่อนักเรียนที่ไม่ผ่านเกณฑ์ (${failed.length} คน)</h3>
+            <table>
+                <thead><tr><th>ที่</th><th>ชื่อ-นามสกุล</th><th>ชั้น</th><th>เลขที่</th>
+                    <th>มา</th><th>ลา</th><th>ขาด</th><th>โดด</th><th>ร้อยละ</th></tr></thead>
+                <tbody>${failedRows}</tbody>
+            </table>
+
+            <div class="sig">
+                <div>ลงชื่อ ..................................<br>( .................................... )<br>ผู้รายงาน</div>
+                <div>ลงชื่อ ..................................<br>( .................................... )<br>ผู้ตรวจสอบ</div>
+                <div>ลงชื่อ ..................................<br>( นางภิรญา สอนศิริ )<br>ผู้อนุมัติ</div>
+            </div>
+        </body></html>`;
+
+        const w = window.open('', '_blank');
+        if (!w) return alert('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณากดอนุญาตป๊อปอัปก่อน');
+        w.document.write(html);
+        w.document.close();
+        w.onload = () => { w.focus(); setTimeout(() => w.print(), 600); };
+    }
     
     function loadStudents() {
     const container = document.getElementById('studentList');
@@ -1391,29 +1507,17 @@ function createSubmissionCharts() {
         const searchQuery = searchInputElem.value.trim().toLowerCase();
         if (searchQuery) {
             filteredStudents = filteredStudents.filter(s => {
-                const gradeText = s.grade ? s.grade.toLowerCase() : '';
-                const nameText = s.name ? s.name.toLowerCase() : '';
+                const gradeText = s.grade ? String(s.grade).toLowerCase() : '';
+                const nameText = s.name ? String(s.name).toLowerCase() : '';
                 return nameText.includes(searchQuery) || gradeText.includes(searchQuery);
             });
         }
     }
     
     // ✅ เรียงลำดับนักเรียน
-    const gradeOrder = {
-        'ป.1': 1, 'ป.2': 2, 'ป.3/1': 3, 'ป.3/2': 4, 'ป.4/1': 5, 'ป.4/2': 6, 'ป.5/1': 7, 'ป.5/2': 8, 'ป.6/1': 9, 'ป.6/2': 10, 'ป.6/3': 11,
-        'ม.1/1': 12, 'ม.1/2': 13, 'ม.1/3': 14, 'ม.1/4': 15, 'ม.1/5': 16,
-        'ม.2/1': 17, 'ม.2/2': 18, 'ม.2/3': 19, 'ม.2/4': 20, 'ม.2/5': 21,
-        'ม.3/1': 22, 'ม.3/2': 23, 'ม.3/3': 24, 'ม.3/4': 25, 'ม.3/5': 26
-    };
-    
-    filteredStudents.sort((a, b) => {
-        let gA = gradeOrder[a.grade] || 99;
-        let gB = gradeOrder[b.grade] || 99;
-        if (gA !== gB) return gA - gB;
-        let nA = parseInt(a.number) || 0;
-        let nB = parseInt(b.number) || 0;
-        return nA - nB;
-    });
+    filteredStudents.sort((a, b) =>
+        gradeRank(a.grade) - gradeRank(b.grade) ||
+        (parseInt(a.number) || 0) - (parseInt(b.number) || 0));
     
     // อัปเดตจำนวนนักเรียน
     updateStudentCounts();
@@ -1444,20 +1548,10 @@ function createSubmissionCharts() {
 
 // ✅ ฟังก์ชันกรองนักเรียนตามประเภทการศึกษา
 function filterStudentsByEducationType(students, filterType) {
-    if (filterType === 'all') {
-        return students;
-    } else if (filterType === 'elementary') {
-        // ประถมศึกษา: ป.1 - ป.6
-        return students.filter(s => {
-            const grade = s.grade.replace('/1', '').replace('/2', '').replace('/3', '');
-            return grade.startsWith('ป.');
-        });
+    if (filterType === 'elementary') {
+        return students.filter(s => String(s.grade).startsWith('ป.'));
     } else if (filterType === 'secondary') {
-        // มัธยมศึกษา: ม.1 - ม.6
-        return students.filter(s => {
-            const grade = s.grade.replace('/1', '').replace('/2', '');
-            return grade.startsWith('ม.');
-        });
+        return students.filter(s => String(s.grade).startsWith('ม.'));
     }
     return students;
 }
@@ -1466,7 +1560,6 @@ function filterStudentsByEducationType(students, filterType) {
 function filterStudents(filterType) {
     currentStudentFilter = filterType;
     
-    // อัปเดตสไตล์ปุ่ม
     document.getElementById('filterAllStudents').style.background = filterType === 'all' ? '#1e3c72' : 'white';
     document.getElementById('filterAllStudents').style.color = filterType === 'all' ? 'white' : '#1e3c72';
     
@@ -1476,21 +1569,14 @@ function filterStudents(filterType) {
     document.getElementById('filterSecondary').style.background = filterType === 'secondary' ? '#1e3c72' : 'white';
     document.getElementById('filterSecondary').style.color = filterType === 'secondary' ? 'white' : '#1e3c72';
     
-    // โหลดข้อมูลที่กรองแล้ว
     loadStudents();
 }
 
 // ✅ ฟังก์ชันอัปเดตจำนวนนักเรียน
 function updateStudentCounts() {
     const total = studentsData.length;
-    const elementary = studentsData.filter(s => {
-        const grade = s.grade.replace('/1', '').replace('/2', '').replace('/3', '');
-        return grade.startsWith('ป.');
-    }).length;
-    const secondary = studentsData.filter(s => {
-        const grade = s.grade.replace('/1', '').replace('/2', '');
-        return grade.startsWith('ม.');
-    }).length;
+    const elementary = studentsData.filter(s => String(s.grade).startsWith('ป.')).length;
+    const secondary = studentsData.filter(s => String(s.grade).startsWith('ม.')).length;
     
     document.getElementById('countAll').textContent = total;
     document.getElementById('countElem').textContent = elementary;
@@ -1499,23 +1585,17 @@ function updateStudentCounts() {
 
 // ✅ ฟังก์ชันช่วยในการแสดงสีตามประเภทการศึกษา
 function getEducationTypeColor(grade) {
-    const gradeClean = grade.replace('/1', '').replace('/2', '').replace('/3', '');
-    if (gradeClean.startsWith('ป.')) {
-        return '#1e3c72'; // สีน้ำเงินเข้มสำหรับประถม
-    } else if (gradeClean.startsWith('ม.')) {
-        return '#28a745'; // สีเขียวสำหรับมัธยม
-    }
+    const g = String(grade || '');
+    if (g.startsWith('ป.')) return '#1e3c72';
+    if (g.startsWith('ม.')) return '#28a745';
     return '#999';
 }
 
 // ✅ ฟังก์ชันช่วยในการแสดงชื่อประเภท
 function getEducationTypeLabel(grade) {
-    const gradeClean = grade.replace('/1', '').replace('/2', '').replace('/3', '');
-    if (gradeClean.startsWith('ป.')) {
-        return 'ประถมศึกษา';
-    } else if (gradeClean.startsWith('ม.')) {
-        return 'มัธยมศึกษา';
-    }
+    const g = String(grade || '');
+    if (g.startsWith('ป.')) return 'ประถมศึกษา';
+    if (g.startsWith('ม.')) return 'มัธยมศึกษา';
     return 'ไม่ระบุ';
 }
     
@@ -1539,24 +1619,18 @@ function getEducationTypeLabel(grade) {
     }
     
     function loadCheckerApprovals() {
-    // ตรวจสอบว่า login แล้วหรือยัง
     if (!isSessionActive || currentUser?.type !== 'checker') {
         showCheckerLoginModal();
         return;
     }
-
-    // ถ้า login แล้ว ให้แสดงรายงานที่รอตรวจสอบทั้งหมด
     displayPendingChecks();
 }
 
     function loadDirectorApprovals() {
-    // ตรวจสอบว่า login แล้วหรือยัง
     if (!isSessionActive || currentUser?.type !== 'approver') {
         showApproverLoginModal();
         return;
     }
-
-    // ถ้า login แล้ว ให้แสดงรายงานที่รอการอนุมัติทั้งหมด
     displayPendingApprovals();
 }
     
@@ -1573,11 +1647,11 @@ function showCheckerLoginModal() {
             
             <div class="form-group">
                 <label>รหัสผ่าน:</label>
-                <input type="password" id="loginPassword" placeholder="กรุณาใส่รหัสผ่าน" style="font-size: 16px; padding: 12px; letter-spacing: 2px;">
+                <input type="password" id="loginPassword" placeholder="กรุณาใส่รหัสผ่าน" style="font-size: 16px; padding: 12px; letter-spacing: 2px;" onkeydown="if(event.key==='Enter') verifyCheckerLogin()">
             </div>
             
             <div class="form-actions">
-                <button type="button" class="btn-cancel" onclick="document.getElementById('checkerLoginModal').remove(); goToTab('dashboard');">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('checkerLoginModal').remove(); goToTab('dashboard');">ยกเลิก</button>
                 <button type="button" class="btn-submit" onclick="verifyCheckerLogin()">เข้าสู่ระบบ</button>
             </div>
         </div>
@@ -1596,11 +1670,11 @@ function showApproverLoginModal() {
             
             <div class="form-group">
                 <label>รหัสผ่าน:</label>
-                <input type="password" id="loginPassword" placeholder="กรุณาใส่รหัสผ่าน" style="font-size: 16px; padding: 12px; letter-spacing: 2px;">
+                <input type="password" id="loginPassword" placeholder="กรุณาใส่รหัสผ่าน" style="font-size: 16px; padding: 12px; letter-spacing: 2px;" onkeydown="if(event.key==='Enter') verifyApproverLogin()">
             </div>
             
             <div class="form-actions">
-                <button type="button" class="btn-cancel" onclick="document.getElementById('approverLoginModal').remove(); goToTab('dashboard');">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('approverLoginModal').remove(); goToTab('dashboard');">ยกเลิก</button>
                 <button type="button" class="btn-submit" onclick="verifyApproverLogin()">เข้าสู่ระบบ</button>
             </div>
         </div>
@@ -1769,10 +1843,6 @@ function viewActivityDetailForCheck(activityId) {
 }
 
 function showSignatureModal(activity, userType) {
-    // ✅ ค้นหาข้อมูลผู้รับผิดชอบ
-    const reporter = teachersData.find(t => t.name === activity.reporter);
-    const checker = teachersData.find(t => t.name === activity.checker);
-    
     // ✅ คำนวณสถิติการเข้าร่วม
     let attendanceStats = { present: 0, leave: 0, absent: 0, skip: 0 };
     if (activity.attendance && Array.isArray(activity.attendance)) {
@@ -1812,7 +1882,7 @@ function showSignatureModal(activity, userType) {
                 </div>
             </div>
             
-            <!-- 📋 รายละเอียดรายงาน -->
+            <!-- 📋 รายละเอียดกิจกรรม -->
             <div style="background: #fff9e6; padding: 20px; border-radius: 10px; margin-bottom: 20px; border-left: 4px solid #ff9800;">
                 <h4 style="margin: 0 0 15px 0; color: #e65100;">📋 รายละเอียดรายงาน</h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px; margin-bottom: 15px;">
@@ -1932,7 +2002,7 @@ function showSignatureModal(activity, userType) {
             });
             const totalAttended = present + leave;
             const totalPossible = activitiesForGrade.length;
-            const percentage = totalPossible > 0 ? ((totalAttended / totalPossible) * 100).toFixed(0) : 0;
+            const percentage = totalPossible > 0 ? Math.round((totalAttended / totalPossible) * 100) : 0;
             const status = totalPossible > 0 ? (percentage >= 80 ? 'ผ่าน' : 'ไม่ผ่าน') : 'ไม่มีข้อมูล';
             return { ...student, present, leave, absent, skip, percentage, status, index: index + 1 };
          });
@@ -1983,19 +2053,11 @@ function showSignatureModal(activity, userType) {
     const skipTitle = skipNames.length > 0 ? `รายชื่อคนโดด:\n${skipNames.join('\n')}` : '';
 
     const imagesHtml = (activity.images && activity.images.length > 0) 
-        ? `<div class="image-upload-grid">${activity.images.map(imgSrc => {
-            let finalUrl = imgSrc;
-            if (imgSrc.includes('drive.google.com/uc')) {
-                const idMatch = imgSrc.match(/id=([^&]+)/);
-                if (idMatch && idMatch[1]) {
-                    finalUrl = `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w800`;
-                }
-            }
-            return `<div><img src="${finalUrl}" style="width:100%; height: auto; border-radius: 8px; border: 1px solid #ddd;"></div>`;
-        }).join('')}</div>`
+        ? `<div class="image-upload-grid">${activity.images.map(imgSrc =>
+            `<div><img src="${getDriveThumbnailUrl(imgSrc)}" style="width:100%; height: auto; border-radius: 8px; border: 1px solid #ddd;"></div>`
+          ).join('')}</div>`
         : '<p>ไม่มีรูปภาพสำหรับกิจกรรมนี้</p>';
 
-    // ✅ ใช้ renderApprovalSection แทน hardcode HTML
     const approvalSection = renderApprovalSection(activity);
 
     const content = `
@@ -2011,7 +2073,6 @@ function showSignatureModal(activity, userType) {
             <div style="margin-top: 20px;"><strong>📋 รายละเอียดกิจกรรม:</strong><div class="description-box">${activity.description}</div></div>
         </div>
         
-        <!-- ✅ เพิ่ม margin-bottom: 40px ที่นี่ -->
         <div class="info-card" style="margin-bottom: 40px;">
             <h3>📷 ภาพกิจกรรม</h3>
             ${imagesHtml}
@@ -2064,19 +2125,11 @@ function showSignatureModal(activity, userType) {
     }
     
     const imageBoxes = (activity.images && activity.images.length > 0)
-        ? activity.images.map(imgSrc => {
-             let finalUrl = imgSrc;
-             if (imgSrc.includes('drive.google.com/uc')) {
-                 const idMatch = imgSrc.match(/id=([^&]+)/);
-                 if (idMatch && idMatch[1]) {
-                     finalUrl = `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w800`;
-                 }
-             }
-             return `<div class="photo-box"><img src="${finalUrl}" alt="Activity Photo" style="max-width: 100%; max-height: 100%; object-fit: contain;"></div>`;
-          }).join('')
+        ? activity.images.map(imgSrc =>
+             `<div class="photo-box"><img src="${getDriveThumbnailUrl(imgSrc)}" alt="Activity Photo" style="max-width: 100%; max-height: 100%; object-fit: contain;"></div>`
+          ).join('')
         : Array(4).fill('<div class="photo-box empty"><span style="color: #999; font-size: 12px;">ไม่มีรูปภาพ</span></div>').join('');
     
-    // ✅ ลายเซ็นผู้ตรวจ
     const checkerSignatureHtml = activity.checkerSignature 
         ? `<div style="height: 50px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; border: 1px solid #ddd; padding: 3px; border-radius: 3px; background: #f9f9f9; page-break-inside: avoid;">
                 <img src="${activity.checkerSignature}" 
@@ -2085,7 +2138,6 @@ function showSignatureModal(activity, userType) {
             </div>`
         : '<div class="line"></div>';
     
-    // ✅ ลายเซ็นผู้อนุมัติ
     const approverSignatureHtml = activity.approverSignature
         ? `<div style="height: 50px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; border: 1px solid #ddd; padding: 3px; border-radius: 3px; background: #f9f9f9; page-break-inside: avoid;">
                 <img src="${activity.approverSignature}" 
@@ -2094,7 +2146,7 @@ function showSignatureModal(activity, userType) {
             </div>`
         : '<div class="line"></div>';
     
-    const checkerName = (activity.grade && activity.grade.startsWith('ม.')) ? 'นางสาวสงกรานต์ มหามิตร' : 'นางปณิตา ปัญานะ';
+    const checkerName = (activity.grade && String(activity.grade).startsWith('ม.')) ? 'นางสาวสงกรานต์ มหามิตร' : 'นางปณิตา ปัญานะ';
 
     const printHtml = `
         <!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานการปฏิบัติกิจกรรมของลูกเสือ - ${activity.name}</title>
@@ -2243,6 +2295,7 @@ function showSignatureModal(activity, userType) {
         </body></html>`;
 
     const printWindow = window.open('', '_blank');
+    if (!printWindow) return alert('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณากดอนุญาตป๊อปอัปก่อน');
     printWindow.document.write(printHtml);
     printWindow.document.close();
     printWindow.onload = () => { 
@@ -2275,14 +2328,13 @@ Activity: ${a.name}
     console.groupEnd();
 }
 
-    // ============================================
-// อัปเดต renderApprovalSection - ใช้รหัสผ่านเท่านั้น
+// ============================================
+// renderApprovalSection - ใช้รหัสผ่านเท่านั้น
 // ============================================
 
 function renderApprovalSection(activity) {
     let checkerHtml, approverHtml, printButton = '';
 
-    // ✅ สำคัญ: แสดงปุ่ม PDF เมื่อมีทั้ง checker, approver และลายเซ็นครบ
     const hasAllData = activity.approver && activity.approverSignature && 
                        activity.checker && activity.checkerSignature;
     
@@ -2300,7 +2352,6 @@ function renderApprovalSection(activity) {
         `;
     }
 
-    // ✅ ตรวจสอบสถานะผู้ตรวจสอบ
     if (!activity.checker) {
         checkerHtml = `
             <div class="approval-box">
@@ -2309,7 +2360,6 @@ function renderApprovalSection(activity) {
             </div>
         `;
     } else {
-        // ✅ มีลายเซ็นผู้ตรวจ
         const checkerSigDisplay = activity.checkerSignature 
             ? `<div style="margin-top: 20px; border: 1px solid #ddd; padding: 12px; border-radius: 5px; text-align: center; background: white;">
                     <strong style="font-size: 11px; color: #666; display: block; margin-bottom: 10px;">ลายเซ็นดิจิทัล:</strong>
@@ -2332,7 +2382,6 @@ function renderApprovalSection(activity) {
         `;
     }
 
-    // ✅ ตรวจสอบสถานะผู้อนุมัติ
     if (!activity.checker) {
         approverHtml = `
             <div class="approval-box">
@@ -2348,7 +2397,6 @@ function renderApprovalSection(activity) {
             </div>
         `;
     } else {
-        // ✅ มีลายเซ็นผู้อนุมัติ
         const approverSigDisplay = activity.approverSignature 
             ? `<div style="margin-top: 20px; border: 1px solid #ddd; padding: 12px; border-radius: 5px; text-align: center; background: white;">
                     <strong style="font-size: 11px; color: #666; display: block; margin-bottom: 10px;">ลายเซ็นดิจิทัล:</strong>
@@ -2379,35 +2427,11 @@ function renderApprovalSection(activity) {
         ${printButton}
     `;
 }
-    
-// ============================================
-// อัปเดต generatePDFReport - เพิ่มลายเซ็นใน PDF
-// ============================================
-
-// ในฟังก์ชัน createReportHTML ให้เพิ่มส่วนลายเซ็น:
-
-/* ให้เพิ่มโค้ดนี้ในส่วน signature-section ของ PDF:
-
-${activity.checkerSignature ? `
-    <div class="signature-box">
-        <img src="${activity.checkerSignature}" style="max-width: 80px; max-height: 50px; border: 1px solid #999; padding: 2px;">
-        <div style="font-size: 12px; margin-top: 5px;">(ลายเซ็นดิจิทัล)</div>
-    </div>
-` : '<div class="signature-box"></div>'}
-
-${activity.approverSignature ? `
-    <div class="signature-box">
-        <img src="${activity.approverSignature}" style="max-width: 80px; max-height: 50px; border: 1px solid #999; padding: 2px;">
-        <div style="font-size: 12px; margin-top: 5px;">(ลายเซ็นดิจิทัล)</div>
-    </div>
-` : '<div class="signature-box"></div>'}
-*/
 
     // ========================================
     // Form Modal Creation
     // ========================================
     function openActivityForm() {
-    // ✅ สร้าง checkbox list สำหรับเลือกครู แบบ multi-select
     const teacherCheckboxes = teachersData.map(t => `
         <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 5px; display: flex; align-items: center;">
             <input 
@@ -2429,7 +2453,6 @@ ${activity.approverSignature ? `
             <div class="form-group"><label>รายละเอียดกิจกรรม *</label><textarea name="description" required placeholder="อธิบายกิจกรรมโดยละเอียด"></textarea></div>
             <div class="form-group"><label>สถานที่จัด *</label><input type="text" name="location" required placeholder="เช่น สนามโรงเรียน, ห้องประชุม"></div>
             
-            <!-- ✅ ส่วนเลือกผู้รับผิดชอบ (หลายคน) -->
             <div class="form-group">
                 <label>👥 ผู้รับผิดชอบ * (เลือกได้ 1-4 คน)</label>
                 <input type="text" id="responsibleSearchInput" placeholder="🔍 ค้นหาชื่อผู้รับผิดชอบ..." onkeyup="filterResponsibleTeachers()" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: 'Sarabun', sans-serif;">
@@ -2474,32 +2497,25 @@ ${activity.approverSignature ? `
     `;
     createModal('activityFormModal', 'บันทึกกิจกรรมใหม่', content);
     
-    // ✅ เพิ่ม event listener สำหรับ checkbox
     const checkboxes = document.querySelectorAll('input[name="responsible-teacher"]');
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', updateResponsibleSelection);
     });
 }
 
-// ✅ ฟังก์ชนอัปเดตการแสดงผู้รับผิดชอบที่เลือก
 function updateResponsibleSelection() {
     const selectedCheckboxes = document.querySelectorAll('input[name="responsible-teacher"]:checked');
     const count = selectedCheckboxes.length;
     
-    // อัปเดตจำนวน
     document.getElementById('selectedResponsibleCount').textContent = count;
     
-    // ✅ เตือนถ้าเกิน 4 คน
     if (count > 4) {
         alert('สามารถเลือกได้สูงสุด 4 คน');
-        // ยกเลิกการเลือกตัวสุดท้าย
-        const lastChecked = Array.from(selectedCheckboxes)[selectedCheckboxes.length - 1];
-        lastChecked.checked = false;
-        updateResponsibleSelection(); // เรียกใหม่เพื่อลดจำนวน
+        this.checked = false; // ✅ ยกเลิกช่องที่เพิ่งติ๊ก
+        updateResponsibleSelection.call(this);
         return;
     }
     
-    // แสดง Preview
     const previewContainer = document.getElementById('selectedResponsiblePreview');
     const previewList = document.getElementById('previewResponsibleList');
     
@@ -2516,7 +2532,6 @@ function updateResponsibleSelection() {
     }
 }
 
-// ✅ ฟังก์ชันค้นหาผู้รับผิดชอบ
 function filterResponsibleTeachers() {
     const input = document.getElementById('responsibleSearchInput');
     const filter = input.value.toLowerCase();
@@ -2528,11 +2543,7 @@ function filterResponsibleTeachers() {
     
     divs.forEach(div => {
         const text = div.textContent || div.innerText;
-        if (text.toLowerCase().indexOf(filter) > -1) {
-            div.style.display = "";
-        } else {
-            div.style.display = "none";
-        }
+        div.style.display = text.toLowerCase().indexOf(filter) > -1 ? "" : "none";
     });
 }
     
@@ -2625,11 +2636,10 @@ function filterResponsibleTeachers() {
     // ========================================
     // Form & Action Submissions
     // ========================================
+    // ✅ แก้ไข: คืนค่า null เมื่อไม่สำเร็จ (เดิมคืน object ทำให้ if (success) เป็นจริงเสมอ)
     async function postData(action, data, successMessage = '') {
     try {
-        const url = API_URL;
-        
-        if (!url) {
+        if (!API_URL) {
             throw new Error('API_URL ไม่ได้ตั้งค่า');
         }
         
@@ -2642,7 +2652,7 @@ function filterResponsibleTeachers() {
         
         console.log('📤 Payload size:', JSON.stringify(payload).length, 'bytes');
         
-        const response = await fetch(url, {
+        const response = await fetch(API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'text/plain;charset=utf-8'
@@ -2673,7 +2683,7 @@ function filterResponsibleTeachers() {
     } catch (error) {
         console.error('❌ Post error:', error);
         alert('❌ เกิดข้อผิดพลาด:\n' + error.message);
-        return { success: false, message: error.message };
+        return null;
     }
 }
 
@@ -2726,6 +2736,7 @@ async function postDataViaScript(action, data, successMessage) {
         return false;
     }
 }
+
 async function submitActivityForm(event) {
     event.preventDefault();
     const form = event.target;
@@ -2741,7 +2752,6 @@ async function submitActivityForm(event) {
             return;
         }
 
-        // Handle image uploads
         const imageFiles = [form.querySelector('#img1').files[0], form.querySelector('#img2').files[0], form.querySelector('#img3').files[0], form.querySelector('#img4').files[0]];
         const imageBase64Strings = await Promise.all(imageFiles.map(file => fileToBase64(file)));
 
@@ -2753,13 +2763,10 @@ async function submitActivityForm(event) {
                 status: form.querySelector(`input[name="attendance_${student.id}"]:checked`)?.value || 'absent'
             }));
         
-        // ✅ เก็บผู้รับผิดชอบเป็น array
         const selectedResponsibleCheckboxes = document.querySelectorAll('input[name="responsible-teacher"]:checked');
         
         if (selectedResponsibleCheckboxes.length === 0) {
             alert('กรุณาเลือกผู้รับผิดชอบอย่างน้อย 1 คน');
-            submitButton.disabled = false;
-            submitButton.textContent = 'บันทึกกิจกรรม';
             return;
         }
         
@@ -2772,7 +2779,7 @@ async function submitActivityForm(event) {
             name: formData.get('activityName').trim(),
             description: formData.get('description').trim(),
             location: formData.get('location').trim(),
-            responsible: responsible,  // ✅ ส่งเป็น array
+            responsible: responsible,
             reporter: formData.get('reporter').trim(),
             attendance: attendance,
             images: imageBase64Strings.filter(img => img !== null)
@@ -2784,23 +2791,17 @@ async function submitActivityForm(event) {
         }
 
         const success = await postData('addActivity', activityData, 'บันทึกกิจกรรมสำเร็จ');
-        if (success) {  // ✅ ปิด if block นี้ให้ครบ
+        if (success) {
             document.getElementById('activityFormModal').remove();
-            
-            // ✅ Clear cache
             lastDataLoad = null;
-            
-            // ✅ Clear data
             studentsData = [];
             activitiesData = [];
             teachersData = [];
-            
-            // ✅ Reload หน้า
             setTimeout(() => {
                 location.reload();
             }, 1500);
         }
-    } catch (error) {  // ✅ ตอนนี้ catch อยู่ถูกตำแหน่ง
+    } catch (error) {
         console.error('Error submitting activity:', error);
         alert('เกิดข้อผิดพลาด: ' + error.message);
     } finally {
@@ -2820,24 +2821,18 @@ async function submitActivityForm(event) {
             return;
         }
         const success = await postData('addStudent', { id: 'STU_' + Date.now(), ...studentData }, 'เพิ่มนักเรียนสำเร็จ');
-if (success) {
-    document.getElementById('studentFormModal').remove();
-     // ✅ เพิ่มบรรทัดนี้:
-    currentStudentFilter = 'all';
-    // ✅ Clear cache
-    lastDataLoad = null;
-    
-    // ✅ Clear data
-    studentsData = [];
-    activitiesData = [];
-    teachersData = [];
-    
-    // ✅ Reload หน้า
-    setTimeout(() => {
-        location.reload();
-    }, 1500);
+        if (success) {
+            document.getElementById('studentFormModal').remove();
+            currentStudentFilter = 'all';
+            lastDataLoad = null;
+            studentsData = [];
+            activitiesData = [];
+            teachersData = [];
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        }
     }
-}
 
     async function submitTeacherForm(event) {
         event.preventDefault();
@@ -2851,23 +2846,17 @@ if (success) {
             return;
         }
         const success = await postData('addTeacher', { id: 'TCH_' + Date.now(), ...teacherData }, 'เพิ่มผู้กำกับสำเร็จ');
-if (success) {
-    document.getElementById('teacherFormModal').remove();
-    
-    // ✅ Clear cache
-    lastDataLoad = null;
-    
-    // ✅ Clear data
-    studentsData = [];
-    activitiesData = [];
-    teachersData = [];
-    
-    // ✅ Reload หน้า
-    setTimeout(() => {
-        location.reload();
-    }, 1500);
+        if (success) {
+            document.getElementById('teacherFormModal').remove();
+            lastDataLoad = null;
+            studentsData = [];
+            activitiesData = [];
+            teachersData = [];
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        }
     }
-}
     
     // ========================================
     // Student & Teacher Action Functions
@@ -2877,12 +2866,8 @@ if (success) {
     const student = studentsData.find(s => s.id === id);
     if (!student) return alert('ไม่พบข้อมูลนักเรียน');
 
-    const gradeOptions = [
-        'ป.1','ป.2','ป.3/1','ป.3/2','ป.4/1','ป.4/2','ป.5/1','ป.5/2','ป.6/1','ป.6/2','ป.6/3',
-        'ม.1/1','ม.1/2','ม.1/3','ม.1/4','ม.1/5',
-        'ม.2/1','ม.2/2','ม.2/3','ม.2/4','ม.2/5',
-        'ม.3/1','ม.3/2','ม.3/3','ม.3/4','ม.3/5'
-    ].map(g => `<option value="${g}" ${g === student.grade ? 'selected' : ''}>${g}</option>`).join('');
+    const elemGrades = ['ป.1','ป.2','ป.3/1','ป.3/2','ป.4/1','ป.4/2','ป.5/1','ป.5/2','ป.6/1','ป.6/2','ป.6/3'];
+    const secGrades = ['ม.1/1','ม.1/2','ม.1/3','ม.1/4','ม.1/5','ม.2/1','ม.2/2','ม.2/3','ม.2/4','ม.2/5','ม.3/1','ม.3/2','ม.3/3','ม.3/4','ม.3/5'];
 
     const content = `
         <form id="editStudentForm" onsubmit="submitEditStudent(event, '${id}')">
@@ -2894,16 +2879,13 @@ if (success) {
                 <label>ระดับชั้น *</label>
                 <select id="editStudentGrade" required>
                     <optgroup label="📚 ประถมศึกษา">
-                        ${gradeOptions.split('ม.').length > 0 ? 
-                          ['ป.1','ป.2','ป.3/1','ป.3/2','ป.4/1','ป.4/2','ป.5/1','ป.5/2','ป.6/1','ป.6/2','ป.6/3']
-                          .map(g => `<option value="${g}" ${g === student.grade ? 'selected' : ''}>ประถมศึกษาปีที่ ${g.replace('ป.','')}</option>`).join('') : ''}
+                        ${elemGrades.map(g => `<option value="${g}" ${g === student.grade ? 'selected' : ''}>ประถมศึกษาปีที่ ${g.replace('ป.','')}</option>`).join('')}
                     </optgroup>
                     <optgroup label="📖 มัธยมศึกษา">
-                        ${['ม.1/1','ม.1/2','ม.1/3','ม.1/4','ม.1/5','ม.2/1','ม.2/2','ม.2/3','ม.2/4','ม.2/5','ม.3/1','ม.3/2','ม.3/3','ม.3/4','ม.3/5']
-                          .map(g => `<option value="${g}" ${g === student.grade ? 'selected' : ''}>มัธยมศึกษาปีที่ ${g.replace('ม.','')}</option>`).join('')}
+                        ${secGrades.map(g => `<option value="${g}" ${g === student.grade ? 'selected' : ''}>มัธยมศึกษาปีที่ ${g.replace('ม.','')}</option>`).join('')}
                     </optgroup>
                     <optgroup label="💼 ทวิศึกษา">
-                        ${['ม.4/2'].map(g => `<option value="${g}" ${g === student.grade ? 'selected' : ''}>มัธยมศึกษาปีที่ 4/2 (ทวิศึกษา)</option>`).join('')}
+                        <option value="ม.4/2" ${student.grade === 'ม.4/2' ? 'selected' : ''}>มัธยมศึกษาปีที่ 4/2 (ทวิศึกษา)</option>
                     </optgroup>
                 </select>
             </div>
@@ -2931,7 +2913,6 @@ async function submitEditStudent(event, id) {
         return;
     }
 
-    // ✅ เปลี่ยนปุ่มเป็น loading
     const submitBtn = event.target.querySelector('.btn-submit');
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ กำลังบันทึก...';
@@ -2939,9 +2920,7 @@ async function submitEditStudent(event, id) {
 
     const success = await postData('updateStudent', { id, name, grade, number }, 'แก้ไขข้อมูลนักเรียนสำเร็จ');
     if (success) {
-        // ✅ เปลี่ยนปุ่มเป็น success
         submitBtn.textContent = '✅ บันทึกสำเร็จ!';
-        submitBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
         submitBtn.style.opacity = '1';
 
         document.getElementById('editStudentModal').remove();
@@ -2951,7 +2930,6 @@ async function submitEditStudent(event, id) {
         teachersData = [];
         setTimeout(() => location.reload(), 1500);
     } else {
-        // ✅ คืนค่าปุ่มถ้าล้มเหลว
         submitBtn.disabled = false;
         submitBtn.textContent = 'บันทึกการแก้ไข';
         submitBtn.style.opacity = '1';
@@ -3000,7 +2978,7 @@ async function submitEditStudent(event, id) {
         submitBtn.disabled = true;
         submitBtn.textContent = 'กำลังลบข้อมูล...';
 
-        const success = await postData('deleteStudentsByGrade', { grade }, `กำลังลบข้อมูลห้อง ${grade}`);
+        const success = await postData('deleteStudentsByGrade', { grade }, `ลบข้อมูลห้อง ${grade} สำเร็จ`);
         if (success) {
             document.getElementById('deleteGradeModal').remove();
             lastDataLoad = null;
@@ -3016,19 +2994,11 @@ async function submitEditStudent(event, id) {
     
     const success = await postData('deleteStudent', { id }, 'ลบนักเรียนสำเร็จ');
     if (success) {
-        console.log('🗑️ Student deleted');
-        
-        // ✅ Clear cache
         lastDataLoad = null;
-        
-        // ✅ Clear data
         studentsData = [];
         activitiesData = [];
         teachersData = [];
-        
-        // ✅ Reload หน้า
         setTimeout(() => {
-            console.log('🔄 Reloading page...');
             location.reload();
         }, 1500);
     }
@@ -3071,7 +3041,6 @@ async function submitEditTeacher(event, id) {
         return;
     }
 
-    // ✅ เปลี่ยนปุ่มเป็น loading
     const submitBtn = event.target.querySelector('.btn-submit');
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ กำลังบันทึก...';
@@ -3079,9 +3048,7 @@ async function submitEditTeacher(event, id) {
 
     const success = await postData('updateTeacher', { id, name, email, phone }, 'แก้ไขข้อมูลผู้กำกับสำเร็จ');
     if (success) {
-        // ✅ เปลี่ยนปุ่มเป็น success
         submitBtn.textContent = '✅ บันทึกสำเร็จ!';
-        submitBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
         submitBtn.style.opacity = '1';
 
         document.getElementById('editTeacherModal').remove();
@@ -3091,7 +3058,6 @@ async function submitEditTeacher(event, id) {
         teachersData = [];
         setTimeout(() => location.reload(), 1500);
     } else {
-        // ✅ คืนค่าปุ่มถ้าล้มเหลว
         submitBtn.disabled = false;
         submitBtn.textContent = 'บันทึกการแก้ไข';
         submitBtn.style.opacity = '1';
@@ -3103,131 +3069,51 @@ async function submitEditTeacher(event, id) {
 
     const success = await postData('deleteTeacher', { id }, 'ลบผู้กำกับสำเร็จ');
     if (success) {
-        console.log('🗑️ Teacher deleted');
-        
-        // ✅ Clear cache
         lastDataLoad = null;
-        
-        // ✅ Clear data
         studentsData = [];
         activitiesData = [];
         teachersData = [];
-        
-        // ✅ Reload หน้า
         setTimeout(() => {
-            console.log('🔄 Reloading page...');
             location.reload();
         }, 1500);
     }
 }
 
-    async function submitCheck(activityId) {
-         const password = document.getElementById(`checkPass_${activityId}`).value;
-         if (password !== 'check123') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
-         const checkData = { activityId, checker: 'นางปณิตา ปัญญานะ', checkerDate: new Date().toLocaleString('th-TH'), checkerComment: document.getElementById(`checkComment_${activityId}`).value };
-         const success = await postData('submitCheck', checkData, 'ตรวจสอบสำเร็จ');
-         if (success) { 
-    document.getElementById(`activityDetail_${activityId}`).remove();
-    
-    // ✅ Clear cache
-    lastDataLoad = null;
-    
-    // ✅ Clear data
-    studentsData = [];
-    activitiesData = [];
-    teachersData = [];
-    
-    // ✅ Reload หน้า
-    setTimeout(() => {
-        location.reload();
-    }, 1500);
-}
-    }
-
-    async function submitApproval(activityId) {
-    const password = document.getElementById(`approvePass_${activityId}`).value;
-    if (password !== 'admin999') { alert('รหัสผ่านไม่ถูกต้อง'); return; }
-    const approvalData = { activityId, approver: 'นางภิรญา สอนศิริ', approverDate: new Date().toLocaleString('th-TH'), approvalStatus: document.getElementById(`approveStatus_${activityId}`).value, approverComment: document.getElementById(`approveComment_${activityId}`).value };
-    const success = await postData('submitApproval', approvalData, 'อนุมัติสำเร็จ');
-    if (success) { 
-        document.getElementById(`activityDetail_${activityId}`).remove();
-        
-        // ✅ Clear cache
-        lastDataLoad = null;
-        
-        // ✅ Clear data
-        studentsData = [];
-        activitiesData = [];
-        teachersData = [];
-        
-        // ✅ Reload หน้า
-        setTimeout(() => {
-            location.reload();
-        }, 1500);
-    }
-}  // ✅ closing brace เดียวเท่านั้น
-
-    // ✅ เพิ่มฟังก์ชันนี้ใหม่
     function calculateTeacherStats() {
     const statsMap = {};
 
-    // ตรวจสอบว่ามีข้อมูลจริง
     if (!activitiesData || activitiesData.length === 0) {
         console.warn('activitiesData is empty');
         return [];
     }
 
-    console.log('Calculating teacher stats from', activitiesData.length, 'activities');
-
     activitiesData.forEach(activity => {
-        // ✅ ใช้ reporter ที่บันทึกไว้ (ชื่อผู้กำกับ)
-        let reporter = activity.reporter || 'ไม่ระบุ';
-        
-        // ล้างเว้นวรรค
-        reporter = reporter.trim();
-        
-        // ตรวจสอบว่าชื่อนี้มีในระบบหรือไม่
-        const teacherExists = teachersData.find(t => 
-            t.name.trim().toLowerCase() === reporter.toLowerCase()
-        );
-        
-        if (!teacherExists && reporter !== 'ไม่ระบุ') {
-            console.warn('Teacher not found:', reporter);
-        }
+        let reporter = String(activity.reporter || 'ไม่ระบุ').trim();
 
         if (!statsMap[reporter]) {
             statsMap[reporter] = {
                 name: reporter,
                 submitted: 0,
-                pending: 0,      // รอตรวจสอบ
-                checked: 0,       // ผ่านตรวจสอบแล้ว
-                approved: 0       // อนุมัติแล้ว
+                pending: 0,
+                checked: 0,
+                approved: 0
             };
         }
 
-        // นับจำนวนรายงาน
         statsMap[reporter].submitted += 1;
 
-        // ตรวจสอบสถานะ
         if (!activity.checker) {
-            // ยังไม่ได้ตรวจสอบ
             statsMap[reporter].pending += 1;
-        } else if (activity.checker && !activity.approver) {
-            // ตรวจแล้ว แต่ยังไม่อนุมัติ
+        } else if (!activity.approver) {
             statsMap[reporter].checked += 1;
-        } else if (activity.approver) {
-            // อนุมัติแล้ว
+        } else {
             statsMap[reporter].approved += 1;
         }
     });
 
-    const result = Object.values(statsMap).sort((a, b) => b.submitted - a.submitted);
-    console.log('Teacher Stats Result:', result);
-    return result;
+    return Object.values(statsMap).sort((a, b) => b.submitted - a.submitted);
 }
 
-
-  // ✅ ดีบัก: ดูว่า reporter ที่บันทึกไว้คืออะไร
 function debugTeacherData() {
     console.log('=== Debug Teacher Data ===');
     console.log('Teachers in system:', teachersData.map(t => t.name));
@@ -3235,22 +3121,18 @@ function debugTeacherData() {
     console.log('Unique reporters:', [...new Set(activitiesData.map(a => a.reporter))]);
 }
 
-    // ✅ เพิ่มฟังก์ชันนี้ใหม่
     function loadTeacherReport() {
-    // 🔧 ทำลาย teacher charts เก่า
     if (window.teacherBarChartInstance) {
         window.teacherBarChartInstance.destroy();
         window.teacherBarChartInstance = null;
     }
     
-    // ตรวจสอบว่า activitiesData ถูกโหลดแล้ว
     if (!activitiesData || activitiesData.length === 0) {
         document.getElementById('teacherStatsTable').innerHTML = 
             '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #999;">ยังไม่มีข้อมูลรายงาน กรุณาตรวจสอบการเชื่อมต่อ</td></tr>';
         return;
     }
 
-    // ตรวจสอบว่า Chart library ถูกโหลดแล้ว
     if (typeof Chart === 'undefined') {
         document.getElementById('teacherStatsTable').innerHTML = 
             '<tr><td colspan="7" style="text-align: center; padding: 20px; color: #999;">กำลังโหลด Chart library...</td></tr>';
@@ -3258,10 +3140,7 @@ function debugTeacherData() {
         return;
     }
 
-    // คำนวณสถิติจากข้อมูลจริง
     const teacherStats = calculateTeacherStats();
-    
-    console.log('Teacher Stats:', teacherStats); // ดีบัก
     
     if (teacherStats.length === 0) {
         document.getElementById('teacherStatsTable').innerHTML = 
@@ -3271,21 +3150,12 @@ function debugTeacherData() {
         return;
     }
 
-    // อัปเดตตาราง
     updateTeacherTable(teacherStats);
-    
-    // วาด Bar Chart
     createTeacherBarChart(teacherStats);
-    
-    // วาด Pie Charts
     createTeacherPieCharts(teacherStats);
-    
-    console.log('Teacher Report loaded successfully');
 }
 
-    // ✅ เพิ่มฟังก์ชันนี้ใหม่
 function destroyAllCharts() {
-    // Destroy dashboard charts
     if (window.statusChartInstance) {
         window.statusChartInstance.destroy();
         window.statusChartInstance = null;
@@ -3294,16 +3164,15 @@ function destroyAllCharts() {
         window.progressChartInstance.destroy();
         window.progressChartInstance = null;
     }
-    
-    // Destroy teacher report chart
     if (window.teacherBarChartInstance) {
         window.teacherBarChartInstance.destroy();
         window.teacherBarChartInstance = null;
     }
-    
-    console.log('✅ All charts destroyed');
+    // ✅ ทำลาย pie charts รายคนด้วย (ป้องกันหน่วยความจำรั่ว)
+    (window.teacherPieChartInstances || []).forEach(c => c.destroy());
+    window.teacherPieChartInstances = [];
 }
-    // ✅ เพิ่มฟังก์ชันนี้ใหม่
+
     function updateTeacherTable(teacherStats) {
         const tbody = document.getElementById('teacherStatsTable');
         tbody.innerHTML = teacherStats.map((teacher, index) => {
@@ -3346,11 +3215,9 @@ function destroyAllCharts() {
         }).join('');
     }
 
-    // ✅ เพิ่มฟังก์ชันนี้ใหม่
     function createTeacherBarChart(teacherStats) {
         const ctx = document.getElementById('teacherBarChart').getContext('2d');
         
-        // ลบ chart เก่าถ้ามี
         if (window.teacherBarChartInstance) {
             window.teacherBarChartInstance.destroy();
         }
@@ -3360,26 +3227,10 @@ function destroyAllCharts() {
             data: {
                 labels: teacherStats.map(t => t.name),
                 datasets: [
-                    {
-                        label: 'ส่งแล้ว',
-                        data: teacherStats.map(t => t.submitted),
-                        backgroundColor: '#667eea'
-                    },
-                    {
-                        label: 'รอตรวจ',
-                        data: teacherStats.map(t => t.pending),
-                        backgroundColor: '#ffc107'
-                    },
-                    {
-                        label: 'ตรวจแล้ว',
-                        data: teacherStats.map(t => t.checked),
-                        backgroundColor: '#2196f3'
-                    },
-                    {
-                        label: 'อนุมัติแล้ว',
-                        data: teacherStats.map(t => t.approved),
-                        backgroundColor: '#28a745'
-                    }
+                    { label: 'ส่งแล้ว', data: teacherStats.map(t => t.submitted), backgroundColor: '#667eea' },
+                    { label: 'รอตรวจ', data: teacherStats.map(t => t.pending), backgroundColor: '#ffc107' },
+                    { label: 'ตรวจแล้ว', data: teacherStats.map(t => t.checked), backgroundColor: '#2196f3' },
+                    { label: 'อนุมัติแล้ว', data: teacherStats.map(t => t.approved), backgroundColor: '#28a745' }
                 ]
             },
             options: {
@@ -3397,9 +3248,10 @@ function destroyAllCharts() {
         });
     }
 
-    // ✅ เพิ่มฟังก์ชันนี้ใหม่
     function createTeacherPieCharts(teacherStats) {
         const container = document.getElementById('teacherPieCharts');
+        (window.teacherPieChartInstances || []).forEach(c => c.destroy());
+        window.teacherPieChartInstances = [];
         container.innerHTML = '';
 
         teacherStats.forEach((teacher, index) => {
@@ -3439,11 +3291,8 @@ function destroyAllCharts() {
             
             container.appendChild(chartDiv);
 
-            // วาด Pie Chart
-            // วาด Pie Chart
             const ctx = document.getElementById(canvasId).getContext('2d');
             
-            // 🔧 เก็บ instance ไว้เพื่อทำลายในครั้งต่อไป
             const chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -3461,6 +3310,7 @@ function destroyAllCharts() {
                     plugins: { legend: { position: 'bottom' } }
                 }
             });
+            window.teacherPieChartInstances.push(chartInstance);
         });
     }
 
@@ -3476,11 +3326,13 @@ let isSessionActive = false;
 
 
 // ============================================
-// แสดงรายชื่อนักเรียนที่ไม่ผ่าน
+// แสดงรายชื่อนักเรียนที่ไม่ผ่าน (จากการ์ดแดชบอร์ด)
 // ============================================
 function showFailedStudentsModal() {
     const reports = calculateStudentReports();
-    const failedStudents = reports.filter(r => r.status === 'ไม่ผ่าน');
+    const failedStudents = reports
+        .filter(r => r.status === 'ไม่ผ่าน')
+        .sort((a, b) => gradeRank(a.grade) - gradeRank(b.grade) || (parseInt(a.number) || 0) - (parseInt(b.number) || 0));
     
     let listHTML = '';
     if (failedStudents.length === 0) {
@@ -3513,151 +3365,12 @@ function showFailedStudentsModal() {
             ${listHTML}
         </div>
         <div class="form-actions" style="margin-top: 20px;">
-            <button type="button" class="btn-cancel" onclick="document.getElementById('failedStudentsModal').remove()" style="width: 100%;">ปิดหน้าต่าง</button>
+            <button type="button" class="btn-cancel" onclick="document.getElementById('failedStudentsModal').remove()">ปิดหน้าต่าง</button>
+            <button type="button" class="btn-submit" style="background: #dc3545;" onclick="currentReportFilter='all'; exportPassFailPDF()">🖨️ ส่งออก PDF</button>
         </div>
     `;
     
     createModal('failedStudentsModal', 'รายชื่อนักเรียนที่ไม่ผ่านเกณฑ์ (<80%)', content, '600px');
-}
-
-// ============================================
-// ฟังก์ชัน Login
-// ============================================
-
-function showLoginModal(userType) {
-    const title = userType === 'checker' ? 'เข้าสู่ระบบผู้ตรวจสอบ' : 'เข้าสู่ระบบผู้อนุมัติ';
-    const content = `
-        <div style="max-width: 300px; margin: 0 auto; text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 20px;">
-                ${userType === 'checker' ? '✅' : '🔖'}
-            </div>
-            
-            <div class="form-group">
-                <label>รหัสผ่าน:</label>
-                <input type="password" id="loginPassword" placeholder="กรุณาใส่รหัสผ่าน" style="font-size: 16px; padding: 12px; letter-spacing: 2px;">
-            </div>
-            
-            <div class="form-actions">
-                <button type="button" class="btn-cancel" onclick="document.querySelector('[id*=loginModal]').remove()">ยกเลิก</button>
-                <button type="button" class="btn-submit" onclick="verifyLogin('${userType}')">เข้าสู่ระบบ</button>
-            </div>
-        </div>
-    `;
-    
-    createModal(`loginModal_${userType}`, title, content, '400px');
-    setTimeout(() => document.getElementById('loginPassword').focus(), 100);
-}
-
-function verifyLogin(userType) {
-    const password = document.getElementById('loginPassword').value;
-    const correctPassword = userType === 'checker' ? CHECKER_PASSWORD : APPROVER_PASSWORD;
-    
-    if (password !== correctPassword) {
-        alert('รหัสผ่านไม่ถูกต้อง');
-        return;
-    }
-    
-    currentUser = {
-        type: userType,
-        loginTime: new Date()
-    };
-    
-    document.querySelector(`[id*=loginModal_${userType}]`)?.remove();
-    showPendingReports(userType);
-}
-
-// ============================================
-// ฟังก์ชันแสดงรายงานที่รอ
-// ============================================
-
-function showPendingReports(userType) {
-    let pendingActivities = [];
-    
-    if (userType === 'checker') {
-        pendingActivities = activitiesData.filter(a => !a.checker);
-    } else {
-        pendingActivities = activitiesData.filter(a => a.checker && !a.approver);
-    }
-    
-    if (pendingActivities.length === 0) {
-        alert('ไม่มีรายงานที่รอการ' + (userType === 'checker' ? 'ตรวจสอบ' : 'อนุมัติ'));
-        currentUser = null;
-        return;
-    }
-    
-    const content = `
-        <div style="max-width: 800px;">
-            <h3 style="color: #1e3c72; margin-bottom: 20px;">
-                รายงานที่รอการ${userType === 'checker' ? 'ตรวจสอบ' : 'อนุมัติ'} (${pendingActivities.length} รายการ)
-            </h3>
-            
-            <div class="data-list" style="max-height: 400px; overflow-y: auto;">
-                ${pendingActivities.map((activity, idx) => `
-                    <div class="data-item">
-                        <h3>${activity.name}</h3>
-                        <div class="data-meta">
-                            <span>📅 ${new Date(activity.date).toLocaleDateString('th-TH')}</span>
-                            <span>🎯 ${activity.grade}</span>
-                            <span>👤 ${activity.reporter}</span>
-                        </div>
-                        <div style="margin-top: 15px; text-align: right;">
-                            <button class="btn btn-success" onclick="selectActivityForSign('${activity.id}', '${userType}')">ลงนาม</button>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
-    
-    createModal(`pendingReportsModal`, 'เลือกรายงาน', content);
-}
-
-// ============================================
-// ฟังก์ชันเลือกรายงานแล้วลงนาม
-// ============================================
-
-function selectActivityForSign(activityId, userType) {
-    const activity = activitiesData.find(a => a.id === activityId);
-    if (!activity) return;
-    
-    document.getElementById('pendingReportsModal').remove();
-    
-    const content = `
-        <div style="max-width: 700px;">
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-                <h4 style="margin: 0 0 15px 0; color: #1e3c72;">📋 รายละเอียดรายงาน</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 14px;">
-                    <div><strong>ชื่อกิจกรรม:</strong><br>${activity.name}</div>
-                    <div><strong>วันที่:</strong><br>${new Date(activity.date).toLocaleDateString('th-TH')}</div>
-                    <div><strong>ระดับชั้น:</strong><br>${activity.grade}</div>
-                    <div><strong>ผู้รายงาน:</strong><br>${activity.reporter}</div>
-                </div>
-            </div>
-            
-            <div style="margin-bottom: 20px;">
-                <label style="font-weight: 600; margin-bottom: 10px; display: block; color: #1e3c72;">✍️ ลายเซ็นดิจิทัล:</label>
-                <p style="font-size: 12px; color: #666; margin-bottom: 10px;">วาดลายเซ็นของคุณด้านล่าง (กด-ลากเมาส์)</p>
-                <div style="border: 2px solid #ccc; border-radius: 8px; background: white; overflow: hidden;">
-                    <canvas id="signaturePad" width="650" height="180" style="cursor: crosshair; display: block; background: white;"></canvas>
-                </div>
-                <div style="margin-top: 10px; display: flex; gap: 10px;">
-                    <button class="btn" style="flex: 1;" onclick="clearSignature()">🔄 ล้างลายเซ็น</button>
-                    <button class="btn btn-success" style="flex: 1;" onclick="saveSignature('${activityId}', '${userType}')">✓ ยืนยันลายเซ็น</button>
-                </div>
-            </div>
-            
-            <div>
-                <label style="font-weight: 600; margin-bottom: 8px; display: block; color: #1e3c72;">💬 ความคิดเห็น (ถ้ามี):</label>
-                <textarea id="signComment" placeholder="ใส่ความคิดเห็น..." style="width: 100%; height: 70px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-family: inherit; font-size: 14px; resize: none;"></textarea>
-            </div>
-        </div>
-    `;
-    
-    createModal(`signModal_${activityId}`, 
-        userType === 'checker' ? 'ตรวจสอบและลงนาม' : 'อนุมัติและลงนาม',
-        content);
-    
-    setTimeout(() => initSignaturePad(), 100);
 }
 
 // ============================================
@@ -3672,21 +3385,17 @@ function initSignaturePad() {
     let isDrawing = false;
     let lastX = 0;
     let lastY = 0;
-    
-    canvas.addEventListener('mousedown', (e) => {
-        isDrawing = true;
+
+    // ✅ แปลงพิกัดให้ถูกต้องแม้ canvas ถูกย่อบนจอเล็ก
+    function getPos(clientX, clientY) {
         const rect = canvas.getBoundingClientRect();
-        lastX = e.clientX - rect.left;
-        lastY = e.clientY - rect.top;
-    });
-    
-    canvas.addEventListener('mousemove', (e) => {
-        if (!isDrawing) return;
-        
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
+        return {
+            x: (clientX - rect.left) * (canvas.width / rect.width),
+            y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
+    }
+
+    function drawTo(x, y) {
         ctx.beginPath();
         ctx.moveTo(lastX, lastY);
         ctx.lineTo(x, y);
@@ -3695,58 +3404,43 @@ function initSignaturePad() {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.stroke();
-        
         lastX = x;
         lastY = y;
+    }
+    
+    canvas.addEventListener('mousedown', (e) => {
+        isDrawing = true;
+        const p = getPos(e.clientX, e.clientY);
+        lastX = p.x; lastY = p.y;
     });
     
-    canvas.addEventListener('mouseup', () => {
-        isDrawing = false;
+    canvas.addEventListener('mousemove', (e) => {
+        if (!isDrawing) return;
+        const p = getPos(e.clientX, e.clientY);
+        drawTo(p.x, p.y);
     });
     
-    canvas.addEventListener('mouseleave', () => {
-        isDrawing = false;
-    });
+    canvas.addEventListener('mouseup', () => { isDrawing = false; });
+    canvas.addEventListener('mouseleave', () => { isDrawing = false; });
 
-    // ✅ รองรับการใช้งานผ่านระบบสัมผัส (มือถือ, iPad, ปากกา Stylus)
     canvas.addEventListener('touchstart', (e) => {
         if (e.touches.length > 0) {
-            e.preventDefault(); // ป้องกันหน้าจอเลื่อน
+            e.preventDefault();
             isDrawing = true;
-            const rect = canvas.getBoundingClientRect();
-            lastX = e.touches[0].clientX - rect.left;
-            lastY = e.touches[0].clientY - rect.top;
+            const p = getPos(e.touches[0].clientX, e.touches[0].clientY);
+            lastX = p.x; lastY = p.y;
         }
     }, { passive: false });
     
     canvas.addEventListener('touchmove', (e) => {
         if (!isDrawing) return;
-        e.preventDefault(); // ป้องกันหน้าจอเลื่อน
-        
-        const rect = canvas.getBoundingClientRect();
-        const x = e.touches[0].clientX - rect.left;
-        const y = e.touches[0].clientY - rect.top;
-        
-        ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(x, y);
-        ctx.strokeStyle = '#1e3c72';
-        ctx.lineWidth = 2.5;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.stroke();
-        
-        lastX = x;
-        lastY = y;
+        e.preventDefault();
+        const p = getPos(e.touches[0].clientX, e.touches[0].clientY);
+        drawTo(p.x, p.y);
     }, { passive: false });
     
-    canvas.addEventListener('touchend', () => {
-        isDrawing = false;
-    });
-    
-    canvas.addEventListener('touchcancel', () => {
-        isDrawing = false;
-    });
+    canvas.addEventListener('touchend', () => { isDrawing = false; });
+    canvas.addEventListener('touchcancel', () => { isDrawing = false; });
 }
 
 function clearSignature() {
@@ -3755,6 +3449,15 @@ function clearSignature() {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
+}
+
+// ✅ ตรวจว่ามีการวาดลายเซ็นหรือไม่ (canvas ว่าง = alpha เป็น 0 ทุกจุด)
+function canvasHasSignature(canvas) {
+    const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    for (let i = 3; i < data.length; i += 4) {
+        if (data[i] !== 0) return true;
+    }
+    return false;
 }
 
 async function saveSignatureAndContinue(activityId, userType) {
@@ -3766,20 +3469,12 @@ async function saveSignatureAndContinue(activityId, userType) {
         return;
     }
     
-    const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
-    const hasSignature = imageData.data.some((pixel, index) => {
-        return index % 4 !== 3 && pixel !== 255;
-    });
-    
-    if (!hasSignature) {
+    if (!canvasHasSignature(canvas)) {
         alert('กรุณาวาดลายเซ็น');
         return;
     }
     
-    // ✅ ส่งลายเซ็น Base64 โดยตรง
     const signatureBase64 = canvas.toDataURL('image/png');
-    
-    console.log('✅ Signature Base64:', signatureBase64.substring(0, 100) + '...');
     
     const activity = activitiesData.find(a => a.id === activityId);
     if (!activity) {
@@ -3808,7 +3503,7 @@ async function saveSignatureAndContinue(activityId, userType) {
             checker: activity.checker,
             checkerDate: activity.checkerDate,
             checkerComment: comment,
-            checkerSignature: signatureBase64  // ✅ ส่ง Base64
+            checkerSignature: signatureBase64
           }
         : {
             activityId,
@@ -3816,17 +3511,13 @@ async function saveSignatureAndContinue(activityId, userType) {
             approverDate: activity.approverDate,
             approvalStatus: activity.approvalStatus,
             approverComment: comment,
-            approverSignature: signatureBase64  // ✅ ส่ง Base64
+            approverSignature: signatureBase64
           };
-    
-    console.log('📤 Sending:', { action, signatureLength: signatureBase64.length });
     
     try {
         const response = await postData(action, data);
         
         if (response && response.success) {
-            console.log('✅ Server response:', response);
-            
             const modal = document.getElementById(`signModal_${activityId}`);
             if (modal) modal.remove();
             
@@ -3841,9 +3532,6 @@ async function saveSignatureAndContinue(activityId, userType) {
                     displayPendingApprovals();
                 }
             }, 1500);
-        } else {
-            alert('บันทึกไม่สำเร็จ: ' + (response?.message || 'ข้อผิดพลาดไม่ทราบ'));
-            console.error('Error response:', response);
         }
     } catch (error) {
         alert('เกิดข้อผิดพลาด: ' + error.message);
@@ -3851,15 +3539,14 @@ async function saveSignatureAndContinue(activityId, userType) {
     }
 }
 
-// ✅ แสดง Success Message
 function showSuccessMessage(action) {
     const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
+    modal.className = 'modal-overlay active';
     modal.style.zIndex = '2000';
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 400px; text-align: center; background: white; border-radius: 20px;">
+        <div class="modal-content" style="max-width: 400px; text-align: center; background: white; border-radius: 20px; margin-top: 15vh;">
             <div style="padding: 40px;">
-                <div style="font-size: 80px; margin-bottom: 20px; animation: bounce 0.6s;">✅</div>
+                <div style="font-size: 80px; margin-bottom: 20px;">✅</div>
                 <h2 style="color: #28a745; margin-bottom: 10px;">สำเร็จ!</h2>
                 <p style="color: #666; margin: 15px 0;">บันทึก${action}เสร็จสิ้น</p>
                 <p style="color: #999; font-size: 12px;">ระบบจะปรับปรุงข้อมูลในอีก 2 วินาที...</p>
@@ -3870,35 +3557,6 @@ function showSuccessMessage(action) {
     setTimeout(() => modal.remove(), 2000);
 }
 
-// ============================================
-// ฟังก์ชันอัปโหลดลายเซ็นไป Google Drive
-// ============================================
-
-async function uploadSignatureImage(base64Data, fileName) {
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'uploadSignature',
-                fileName: fileName,
-                imageData: base64Data
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            console.log('Signature uploaded successfully:', result.url);
-            return result.url;
-        } else {
-            console.error('Upload failed:', result.message);
-            return null;
-        }
-    } catch (error) {
-        console.error('Upload error:', error);
-        return null;
-    }
-}
 // ============================================
 // ฟังก์ชันออกจากระบบ
 // ============================================
@@ -3919,112 +3577,9 @@ function logoutApprover() {
     }
 }
 
-
-function saveSignature(activityId, userType) {
-    const canvas = document.getElementById('signaturePad');
-    const comment = document.getElementById('signComment').value.trim();
-    
-    // ตรวจสอบว่ามีการวาดลายเซ็นหรือไม่
-    const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
-    const hasSignature = imageData.data.some((pixel, index) => {
-        return index % 4 !== 3 && pixel !== 255;
-    });
-    
-    if (!hasSignature) {
-        alert('กรุณาวาดลายเซ็น');
-        return;
-    }
-    
-    const signatureImage = canvas.toDataURL('image/png');
-    const activity = activitiesData.find(a => a.id === activityId);
-    
-    if (userType === 'checker') {
-        activity.checker = 'ตรวจแล้ว';
-        activity.checkerDate = new Date().toLocaleString('th-TH');
-        activity.checkerComment = comment;
-        activity.checkerSignature = signatureImage;
-    } else {
-        activity.approver = 'อนุมัติแล้ว';
-        activity.approverDate = new Date().toLocaleString('th-TH');
-        activity.approvalStatus = 'ผ่าน';
-        activity.approverComment = comment;
-        activity.approverSignature = signatureImage;
-    }
-    
-    const action = userType === 'checker' ? 'submitCheck' : 'submitApproval';
-    const data = userType === 'checker' 
-        ? {
-            activityId,
-            checker: activity.checker,
-            checkerDate: activity.checkerDate,
-            checkerComment: comment,
-            checkerSignature: signatureImage
-          }
-        : {
-            activityId,
-            approver: activity.approver,
-            approverDate: activity.approverDate,
-            approvalStatus: activity.approvalStatus,
-            approverComment: comment,
-            approverSignature: signatureImage
-          };
-    
-    postData(action, data, 'ลายเซ็นบันทึกสำเร็จ').then(success => {
-        if (success) {
-            document.getElementById(`signModal_${activityId}`).remove();
-            currentUser = null;
-            loadData(true);
-        }
-    });
-}
-
-
     // ========================================
-    // Initialize App
+    // Excel Import
     // ========================================
-    
-    // ✅ ถ้า DOM พร้อมแล้ว ให้เรียก init ทันที
-    if (document.readyState === 'loading') {
-        // ยังโหลด DOM อยู่ ให้รอ
-        document.addEventListener('DOMContentLoaded', initializeApp);
-    } else {
-        // DOM พร้อมแล้ว เรียกได้ทันที
-        initializeApp();
-    }
-    
-    async function initializeApp() {
-    try {
-        // ✅ โหลดข้อมูลก่อน
-        await loadData(true);
-        
-        // ✅ โหลด Dashboard เป็น tab แรก
-        loadDashboard();
-
-        // ✅ ตั้งค่า nav tab ให้ active tab แรก
-        const firstTab = document.querySelector('.nav-tab');
-        if (firstTab) {
-            firstTab.classList.add('active');
-            const firstTabContent = document.querySelector('.tab-content');
-            if (firstTabContent) {
-                firstTabContent.classList.add('active');
-            }
-        }
-        
-        // ✅ เพิ่ม event listener ให้ nav-tab ทั้งหมด
-        const navTabs = document.querySelectorAll('.nav-tab');
-        navTabs.forEach(tab => {
-            tab.addEventListener('click', (event) => {
-                event.preventDefault();
-                const tabName = tab.getAttribute('data-tab');
-                showTab(event, tabName);
-            });
-        });
-        
-    } catch (error) {
-        console.error('Error loading initial data:', error);
-        alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
-    }
-}
 function openImportStudentModal() {
     const content = `
         <div style="text-align: center; padding: 20px;">
@@ -4057,11 +3612,9 @@ async function handleStudentExcelImport(event) {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
             const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
             
-            // ข้าม Header
             const rows = json.slice(1).filter(row => row.length > 0 && row[0]);
             
             const students = rows.map(row => ({
@@ -4126,11 +3679,9 @@ async function handleTeacherExcelImport(event) {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
             const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
             
-            // ข้าม Header
             const rows = json.slice(1).filter(row => row.length > 0 && row[0]);
             
             const teachers = rows.map(row => ({
@@ -4163,6 +3714,32 @@ async function handleTeacherExcelImport(event) {
     };
     reader.readAsArrayBuffer(file);
 }
+
+    // ========================================
+    // Initialize App
+    // ========================================
+    async function initializeApp() {
+    try {
+        // ✅ ผูก event ให้แท็บก่อน เพื่อให้กดแท็บได้ทันทีแม้ข้อมูลยังโหลดไม่เสร็จ
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', (event) => {
+                event.preventDefault();
+                showTab(event, tab.getAttribute('data-tab'));
+            });
+        });
+
+        await loadData(true);
+    } catch (error) {
+        console.error('Error loading initial data:', error);
+        alert('เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message);
+    }
+}
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+        initializeApp();
+    }
 </script>
     
 </body>
